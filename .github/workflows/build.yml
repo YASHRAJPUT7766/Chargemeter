@@ -1,0 +1,67 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # Gradle wrapper jar/properties are not in the zip Yash uploaded.
+      # This step regenerates them fresh using a system Gradle install,
+      # so the wrapper scripts (./gradlew) work for the rest of the build.
+      - name: Generate Gradle wrapper (if missing)
+        run: |
+          if [ ! -f "./gradlew" ] || [ ! -f "./gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Wrapper missing — generating with Gradle 8.9"
+            wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O /tmp/gradle.zip
+            unzip -q /tmp/gradle.zip -d /tmp
+            /tmp/gradle-8.9/bin/gradle wrapper --gradle-version 8.9
+          fi
+          chmod +x ./gradlew
+
+      # Downloads the two font families the README calls out as
+      # intentionally excluded, and places them with the exact filenames
+      # Type.kt expects.
+      - name: Download required fonts
+        run: |
+          mkdir -p app/src/main/res/font
+          cd app/src/main/res/font
+
+          FONTS_REPO="https://raw.githubusercontent.com/google/fonts/main"
+
+          curl -sL -o jetbrains_mono_regular.ttf   "$FONTS_REPO/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
+          curl -sL -o jetbrains_mono_medium.ttf    "$FONTS_REPO/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
+          curl -sL -o jetbrains_mono_semibold.ttf  "$FONTS_REPO/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
+          curl -sL -o jetbrains_mono_bold.ttf      "$FONTS_REPO/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
+
+          curl -sL -o inter_regular.ttf   "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
+          curl -sL -o inter_medium.ttf    "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
+          curl -sL -o inter_semibold.ttf  "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
+          curl -sL -o inter_bold.ttf      "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
+
+          ls -la
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChargeMeterPro-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
