@@ -4,7 +4,6 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.ServiceCompat
-import androidx.core.content.pm.ServiceInfoCompat
 import com.yash.chargemeterpro.data.battery.ChargingPollScheduler
 import com.yash.chargemeterpro.data.local.SettingsDataStore
 import com.yash.chargemeterpro.data.repository.BatteryRepository
@@ -91,7 +90,11 @@ class ChargingMonitorService : Service() {
             this,
             ChargeMeterNotificationManager.NOTIFICATION_ID_FOREGROUND_SERVICE,
             notification,
-            ServiceInfoCompat.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            } else {
+                0
+            }
         )
     }
 
