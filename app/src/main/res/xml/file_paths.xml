@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Exposes only the app's own "exports" cache subfolder to other apps via
+     FileProvider — used when sharing a CSV/PDF charging report. Nothing
+     else on the device is reachable through this provider. -->
+<paths>
+    <cache-path name="exports" path="exports/" />
+</paths>

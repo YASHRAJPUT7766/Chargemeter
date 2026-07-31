@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Widget update period: Android enforces a platform-level minimum of ~30
+    minutes for android:updatePeriodMillis regardless of what's declared
+    here, and in practice AppWidgetManager frequently defers even that.
+    Because our widget needs to reflect live charging wattage, we do NOT
+    rely on updatePeriodMillis at all — instead ChargingMonitorService and
+    a WorkManager periodic job push explicit updateAll() calls, which is
+    the officially recommended way to get more-frequent-than-30-min widget
+    refreshes while charging is active. updatePeriodMillis is left at 0
+    here to make that explicit and avoid a redundant/confusing platform
+    schedule fighting with our own.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:previewImage="@drawable/widget_preview"
+    android:initialLayout="@layout/widget_loading"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_description" />
