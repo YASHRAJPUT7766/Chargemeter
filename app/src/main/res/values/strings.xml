@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ChargeMeter Pro</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_live_monitor">Live Monitor</string>
+    <string name="nav_history">History</string>
+    <string name="nav_battery_health">Battery Health</string>
+    <string name="nav_statistics">Statistics</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Charging status -->
+    <string name="status_charging">Charging</string>
+    <string name="status_not_charging">Not Charging</string>
+    <string name="status_full">Full</string>
+    <string name="status_discharging">Discharging</string>
+    <string name="status_unknown">Unknown</string>
+
+    <!-- Charging speed -->
+    <string name="speed_fast">FAST</string>
+    <string name="speed_normal">NORMAL</string>
+    <string name="speed_slow">SLOW</string>
+    <string name="speed_trickle">TRICKLE</string>
+    <string name="speed_unknown">—</string>
+
+    <!-- Disclaimers — shown verbatim in-app, required to be accurate and not misleading -->
+    <string name="disclaimer_wattage_estimate">
+        Displayed wattage is an estimate of power delivered to the battery,
+        calculated from the phone\'s reported voltage and current. It may
+        differ from the charger\'s actual wall-side output due to charging
+        losses and device-specific reporting limitations.
+    </string>
+    <string name="disclaimer_wall_output">
+        Exact charger output cannot be directly measured by this device.
+        The displayed charging power is based on the phone\'s reported
+        battery voltage and charging current, not the charger itself.
+    </string>
+    <string name="disclaimer_efficiency">
+        True wall-to-battery efficiency requires measuring power drawn from
+        the wall outlet, which this device cannot do. The figure shown is
+        an estimate of energy delivered to the battery only.
+    </string>
+    <string name="disclaimer_health_score">
+        This health score is a rough indicator based on the limited battery
+        data this device exposes. It is not a substitute for a professional
+        battery diagnostic.
+    </string>
+    <string name="not_available">Not available on this device</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Live battery %, charging status, current, voltage, watts and temperature.</string>
+
+    <!-- Notification channels -->
+    <string name="channel_charging_events_name">Charging Events</string>
+    <string name="channel_charging_events_desc">Charging started, completed, and percentage milestones</string>
+    <string name="channel_alerts_name">Battery Alerts</string>
+    <string name="channel_alerts_desc">Temperature, slow charging, disconnect, and critical battery alerts</string>
+    <string name="channel_monitor_service_name">Always-On Monitor</string>
+    <string name="channel_monitor_service_desc">Persistent notification while Always-On Charging Monitor is active</string>
+
+    <!-- Misc -->
+    <string name="app_tagline">Precision battery &amp; charging analysis</string>
+</resources>

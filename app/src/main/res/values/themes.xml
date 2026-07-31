@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        This is the platform-level (pre-Compose) theme, used only for the
+        window background shown for a frame before Compose takes over, and
+        as the theme for the Glance widget's RemoteViews fallback layout.
+        All actual UI theming lives in ui/theme/Theme.kt (Compose).
+    -->
+    <style name="Theme.ChargeMeterPro" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/instrument_bg</item>
+        <item name="android:statusBarColor">@color/instrument_bg</item>
+        <item name="android:navigationBarColor">@color/instrument_bg</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+    </style>
+</resources>
