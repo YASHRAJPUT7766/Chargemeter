@@ -245,21 +245,12 @@ class BatteryDataSource @Inject constructor(
     }
 
     /**
-     * Adaptive/optimized charging policy indicator, EXTRA_CHARGING_POLICY,
-     * also API 34+ only.
+     * Adaptive/optimized charging policy indicator. There is no verified,
+     * stable public constant for this in the Android SDK as shipped —
+     * always reported Unavailable rather than guessing at values.
      */
     private fun readChargingPolicy(stickyIntent: Intent?): AvailableOr<ChargingPolicy> {
-        if (Build.VERSION.SDK_INT < 34) return AvailableOr.Unavailable
-        val policyExtra = stickyIntent?.getIntExtra(
-            BatteryManager.EXTRA_CHARGING_POLICY,
-            -1
-        ) ?: -1
-        return when (policyExtra) {
-            BatteryManager.CHARGING_POLICY_DEFAULT -> AvailableOr.Value(ChargingPolicy.DEFAULT)
-            BatteryManager.CHARGING_POLICY_ADAPTIVE_LONGEVITY ->
-                AvailableOr.Value(ChargingPolicy.ADAPTIVE_LONGEVITY)
-            else -> AvailableOr.Unavailable
-        }
+        return AvailableOr.Unavailable
     }
 
     private fun mapChargingStatus(statusExtra: Int, batteryPercent: Int): ChargingStatus = when (statusExtra) {
