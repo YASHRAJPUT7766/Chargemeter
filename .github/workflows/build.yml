@@ -55,6 +55,10 @@ jobs:
           curl -sL -o inter_semibold.ttf  "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
           curl -sL -o inter_bold.ttf      "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
 
+          # Android's res/font directory only allows font files (.ttf/.otf/.ttc/.xml).
+          # Remove any leftover README so the resource merger doesn't fail on it.
+          rm -f README.md
+
           ls -la
 
       - name: Build debug APK
