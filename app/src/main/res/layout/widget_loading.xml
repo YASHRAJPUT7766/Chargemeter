@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    android:initialLayout for the widget provider — a plain classic
+    RemoteViews-compatible layout (NOT Compose/Glance) shown for the
+    brief moment before ChargeMeterWidget's Glance content first
+    composes and replaces it. Glance itself renders via RemoteViews
+    under the hood, but this initial placeholder must be authored as
+    ordinary XML since Glance's composable tree isn't available yet
+    at this point in the widget's lifecycle.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/instrument_bg">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Loading…"
+        android:textColor="@color/panel_gray"
+        android:textSize="13sp"
+        android:padding="12dp" />
+
+</FrameLayout>
