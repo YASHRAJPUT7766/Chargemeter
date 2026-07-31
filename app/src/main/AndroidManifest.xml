@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        PERMISSION PHILOSOPHY (see PRIVACY_POLICY.md and README.md):
+        Every permission below is required for a specific, named feature.
+        We deliberately do NOT request: location, contacts, storage-wide
+        access (SAF is used instead), phone state, or any permission whose
+        purpose isn't directly battery/charging related.
+    -->
+
+    <!-- Battery/charging broadcasts (ACTION_BATTERY_CHANGED, ACTION_POWER_CONNECTED,
+         ACTION_POWER_DISCONNECTED) require NO permission to receive — they are
+         normal/protected broadcasts. Nothing to declare for the core dashboard. -->
+
+    <!-- Needed to post local notifications (session complete, 80/90/100%, temp alerts)
+         on Android 13+ (API 33). Runtime-requested; user can deny and app still works,
+         alerts are just silently unavailable. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Needed to run a foreground service for "Always On Charging Monitor" so live
+         wattage keeps updating & the notification-based mini dashboard stays current
+         even when the app is backgrounded. dataSync is used because the service is
+         persisting charging samples locally, not doing media/location work. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Lets the monitoring service keep sampling BatteryManager promptly instead of
+         being deferred by Doze; only relevant while the optional "Always On" toggle
+         is enabled by the user in Settings. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Reschedules the periodic drain-monitor / widget-refresh WorkManager job
+         after a reboot, so history doesn't silently stop updating. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Exact alarms are NOT used. Widget refresh uses WorkManager's periodic work
+         (min 15 min interval per Android platform limits) and the foreground
+         service uses its own coroutine loop while active — no SCHEDULE_EXACT_ALARM
+         permission is requested. -->
+
+    <!-- No INTERNET permission is requested. This app is fully local-first; CSV/PDF
+         export uses the Storage Access Framework (no storage permission needed
+         either) and sharing uses a FileProvider + ACTION_SEND. If the user later
+         enables optional cloud backup via Firebase (not included by default),
+         INTERNET would need to be added at that time — see README.md. -->
+
+    <application
+        android:name=".ChargeMeterApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.ChargeMeterPro"
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="34">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.ChargeMeterPro"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Foreground service backing the optional "Always On Charging Monitor".
+             Only started when the user explicitly enables it in Settings, and it
+             shows a persistent, dismiss-proof-by-design notification while active
+             so the user always knows it's running (Android requirement + our own
+             transparency principle). -->
+        <service
+            android:name=".service.ChargingMonitorService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Restarts the drain-monitor work + reattaches the always-on service
+             (if it was enabled) after device reboot. -->
+        <receiver
+            android:name=".service.BootCompletedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Home screen widget: battery %, status, current, voltage, watts, temp. -->
+        <receiver
+            android:name=".widget.ChargeMeterWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/charge_meter_widget_info" />
+        </receiver>
+
+        <!-- FileProvider for sharing exported CSV/PDF reports without granting
+             broad storage access. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- WorkManager auto-initializes itself via a ContentProvider by default,
+             which would conflict with ChargeMeterApplication's own
+             Configuration.Provider implementation (needed so HiltWorker-annotated
+             workers, like DrainMonitorWorker, get their @AssistedInject
+             dependencies). Removing the default initializer here is required —
+             without it, WorkManager throws IllegalStateException on app start
+             from being initialized twice. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+    </application>
+
+</manifest>
