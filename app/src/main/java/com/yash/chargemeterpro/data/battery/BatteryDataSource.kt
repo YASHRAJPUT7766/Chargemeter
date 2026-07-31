@@ -116,13 +116,13 @@ class BatteryDataSource @Inject constructor(
         val chargingPolicy = readChargingPolicy(stickyIntent)
 
         val maxCurrent = stickyIntent?.getIntExtra(
-            BatteryManager.EXTRA_MAX_CHARGING_CURRENT,
+            "max_charging_current",
             Int.MIN_VALUE
         )?.takeIf { it != Int.MIN_VALUE && it > 0 }
         val maxCurrentResult = maxCurrent?.let { AvailableOr.Value(it.toLong()) } ?: AvailableOr.Unavailable
 
         val maxVoltage = stickyIntent?.getIntExtra(
-            BatteryManager.EXTRA_MAX_CHARGING_VOLTAGE,
+            "max_charging_voltage",
             Int.MIN_VALUE
         )?.takeIf { it != Int.MIN_VALUE && it > 0 }
         val maxVoltageResult = maxVoltage?.let { AvailableOr.Value(it.toLong()) } ?: AvailableOr.Unavailable
