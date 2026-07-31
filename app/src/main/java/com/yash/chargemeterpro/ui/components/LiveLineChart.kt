@@ -13,7 +13,6 @@ import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.fill
@@ -88,9 +87,8 @@ fun LiveLineChart(
 
     val lineLayer = rememberLineCartesianLayer(
         lineProvider = LineCartesianLayer.LineProvider.series(
-            rememberLine(
-                fill = com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineFill(fill(lineColor)),
-                areaFill = null
+            LineCartesianLayer.rememberLine(
+                fill = remember(lineColor) { LineCartesianLayer.LineFill.single(fill(lineColor)) }
             )
         )
     )
