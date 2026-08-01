@@ -105,3 +105,4 @@ fun LiveLineChart(
         modifier = modifier.fillMaxWidth().height(220.dp)
     )
 }
+
