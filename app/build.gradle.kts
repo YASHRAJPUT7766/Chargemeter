@@ -127,8 +127,8 @@ dependencies {
     implementation("androidx.glance:glance-material3:1.1.1")
 
     // --- Charts (live graphs: wattage/current/voltage/% /temp vs time) ---
-    implementation("com.patrykandpatrick.vico:compose:2.0.0-beta.3")
-    implementation("com.patrykandpatrick.vico:compose-m3:2.0.0-beta.3")
+    implementation("com.patrykandpatrick.vico:compose:2.0.0-beta.4")
+    implementation("com.patrykandpatrick.vico:compose-m3:2.0.0-beta.4")
 
     // --- Kotlin ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
