@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.fill
@@ -27,7 +28,7 @@ import kotlinx.coroutines.launch
 
 /**
  * ⚠️ VERIFY-BEFORE-SHIPPING NOTE: this file targets Vico
- * `2.0.0-beta.3` (declared in app/build.gradle.kts). Vico's Compose API
+ * `2.0.0-beta.4` (declared in app/build.gradle.kts). Vico's Compose API
  * changed meaningfully across its 1.x → 2.x beta cycle, and beta-to-beta
  * API surface (exact function names like `rememberLineFill`, the shape
  * of `LineCartesianLayer.LineProvider.series(...)`, and axis
@@ -87,7 +88,7 @@ fun LiveLineChart(
 
     val lineLayer = rememberLineCartesianLayer(
         lineProvider = LineCartesianLayer.LineProvider.series(
-            LineCartesianLayer.rememberLine(
+            rememberLine(
                 fill = remember(lineColor) { LineCartesianLayer.LineFill.single(fill(lineColor)) }
             )
         )
