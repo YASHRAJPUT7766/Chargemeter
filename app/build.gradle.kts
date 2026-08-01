@@ -66,7 +66,14 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs += listOf("-opt-in=kotlin.RequiresOptIn")
+        freeCompilerArgs += listOf(
+            "-opt-in=kotlin.RequiresOptIn",
+            // TopAppBar (ChargeMeterNavHost.kt, SessionDetailScreen.kt) is marked
+            // experimental in Material3 1.3.1. Opting in at the module level here
+            // avoids scattering @OptIn(ExperimentalMaterial3Api::class) across
+            // every call site — revisit if Material3 stabilizes this API later.
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+        )
     }
 
     buildFeatures {
