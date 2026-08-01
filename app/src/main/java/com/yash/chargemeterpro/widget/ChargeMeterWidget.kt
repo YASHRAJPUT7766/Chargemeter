@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
+import androidx.glance.LocalContext
 import androidx.glance.GlanceModifier
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -109,7 +110,7 @@ private fun WidgetContent() {
             .fillMaxSize()
             .background(ColorProvider(BgColor))
             .padding(12.dp)
-            .clickable(actionStartActivity<MainActivity>())
+            .clickable(actionStartActivity(android.content.Intent(LocalContext.current, MainActivity::class.java)))
     ) {
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
