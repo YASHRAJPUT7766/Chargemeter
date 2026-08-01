@@ -175,7 +175,7 @@ private fun SessionRow(session: ChargingSessionEntity, onClick: () -> Unit, onDe
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(androidx.compose.foundation.clickable { onClick() }),
+                    .clickable { onClick() },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
