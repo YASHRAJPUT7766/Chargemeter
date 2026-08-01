@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -64,7 +65,7 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionD
             title = { Text("Session Detail") },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(androidx.compose.material.icons.Icons.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                 }
             },
             actions = {
