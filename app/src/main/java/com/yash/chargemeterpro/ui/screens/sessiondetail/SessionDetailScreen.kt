@@ -64,7 +64,7 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionD
             title = { Text("Session Detail") },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(androidx.compose.material.icons.Icons.Filled.ArrowBack, contentDescription = "Back")
                 }
             },
             actions = {
