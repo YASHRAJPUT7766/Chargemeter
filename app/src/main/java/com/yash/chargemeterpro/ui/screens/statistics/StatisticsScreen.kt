@@ -1,30 +1,57 @@
 package com.yash.chargemeterpro.ui.screens.statistics
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yash.chargemeterpro.domain.usecase.PowerTerminology
+import com.yash.chargemeterpro.ui.components.CapsuleMeterRow
 import com.yash.chargemeterpro.ui.components.DisclaimerText
 import com.yash.chargemeterpro.ui.components.InstrumentCard
-import com.yash.chargemeterpro.ui.components.ReadingRow
+import com.yash.chargemeterpro.ui.components.RingMeter
+import com.yash.chargemeterpro.ui.theme.GraphTemperature
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
+import com.yash.chargemeterpro.ui.theme.VoltageBlue
+import com.yash.chargemeterpro.ui.theme.WarningAmber
 
+/**
+ * Stats page redesign: every number here is expressed through a ring
+ * meter, capsule bar, or a big color-coded figure inside a small card —
+ * never a bare "Label ......... value" text row and never a line chart,
+ * per the ChargeFlow spec. Scales (what fraction=1.0 means for each
+ * ring) are chosen to be typical-range references, not hard maximums —
+ * e.g. the power ring reads "full" around 30W, a fast-charge ceiling for
+ * most phones, so a normal 10-20W session still shows a satisfying,
+ * legible arc instead of looking nearly empty against an unrealistic
+ * upper bound.
+ */
 @Composable
-fun StatisticsScreen(viewModel: StatisticsViewModel = hiltViewModel()) {
+fun StatisticsScreen(
+    onNavigateToBatteryHealth: () -> Unit = {},
+    viewModel: StatisticsViewModel = hiltViewModel()
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -32,68 +59,123 @@ fun StatisticsScreen(viewModel: StatisticsViewModel = hiltViewModel()) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            Text("Statistics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        }
-
-        item { TodaySummaryCard(state) }
-        item { AllTimeSummaryCard(state) }
+        item { TodayCard(state) }
+        item { AllTimeCard(state) }
         item { DrainRateCard(state) }
+        item { BatteryHealthEntryCard(onClick = onNavigateToBatteryHealth) }
         item { DisclaimerText(text = PowerTerminology.WATTAGE_ESTIMATE_DISCLAIMER) }
     }
 }
 
 @Composable
-private fun TodaySummaryCard(state: StatisticsUiState) {
-    InstrumentCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Today", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatBlock(
-                    label = "Sessions",
-                    value = state.todaySessionCount.toString(),
-                    modifier = Modifier.weight(1f)
-                )
-                StatBlock(
-                    label = "Charging Time",
-                    value = formatMinutes(state.todayTotalChargingMinutes),
-                    modifier = Modifier.weight(1f)
-                )
+private fun BatteryHealthEntryCard(onClick: () -> Unit) {
+    InstrumentCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Filled.FavoriteBorder, contentDescription = null, tint = PhosphorGreen)
+                Column {
+                    Text("Battery Health", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Estimated capacity, health score & diagnostics",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PanelGray
+                    )
+                }
             }
-            ReadingRow(
-                label = "Average Power Today",
-                value = state.todayAveragePowerWatts?.let { "%.1f".format(it) },
-                unit = "W"
-            )
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = PanelGray)
         }
     }
 }
 
 @Composable
-private fun AllTimeSummaryCard(state: StatisticsUiState) {
+private fun TodayCard(state: StatisticsUiState) {
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.Bolt, contentDescription = null, tint = PhosphorGreen, modifier = Modifier.height(18.dp))
+                Text("Today", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Sessions today, scaled against a "busy day" reference of 4 so
+                // a typical 1-2 session day still reads clearly on the ring.
+                RingMeter(
+                    fraction = (state.todaySessionCount / 4f),
+                    value = state.todaySessionCount.toString(),
+                    unit = "SESSIONS",
+                    color = PhosphorGreen
+                )
+                RingMeter(
+                    fraction = (state.todayTotalChargingMinutes / 180f), // 3h reference
+                    value = formatMinutesCompact(state.todayTotalChargingMinutes),
+                    unit = "CHARGE TIME",
+                    color = VoltageBlue
+                )
+                RingMeter(
+                    fraction = ((state.todayAveragePowerWatts ?: 0.0) / 30.0).toFloat(),
+                    value = state.todayAveragePowerWatts?.let { "%.0f".format(it) } ?: "—",
+                    unit = "AVG WATTS",
+                    color = WarningAmber
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AllTimeCard(state: StatisticsUiState) {
+    InstrumentCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("All Time", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            ReadingRow(label = "Total Sessions", value = state.allTimeSessionCount.toString())
-            ReadingRow(
+
+            CapsuleMeterRow(
+                label = "Total Sessions",
+                valueText = state.allTimeSessionCount.toString(),
+                fraction = (state.allTimeSessionCount / 100f), // 100 sessions reference ceiling
+                color = PhosphorGreen
+            )
+            CapsuleMeterRow(
                 label = "Average Charging Power",
-                value = state.allTimeAveragePowerWatts?.let { "%.2f".format(it) },
-                unit = "W"
+                valueText = state.allTimeAveragePowerWatts?.let { "%.1f W".format(it) } ?: "—",
+                fraction = ((state.allTimeAveragePowerWatts ?: 0.0) / 30.0).toFloat(),
+                color = WarningAmber
             )
-            ReadingRow(
+            CapsuleMeterRow(
                 label = "Maximum Charging Power",
-                value = state.allTimeMaxPowerWatts?.let { "%.2f".format(it) },
-                unit = "W"
+                valueText = state.allTimeMaxPowerWatts?.let { "%.1f W".format(it) } ?: "—",
+                fraction = ((state.allTimeMaxPowerWatts ?: 0.0) / 65.0).toFloat(), // 65W = common fast-charger ceiling
+                color = VoltageBlue
             )
-            ReadingRow(
-                label = "Total Estimated Energy",
-                value = state.allTimeTotalEnergyWh?.let { "%.1f".format(it) },
-                unit = "Wh"
+            CapsuleMeterRow(
+                label = "Total Energy Delivered",
+                valueText = state.allTimeTotalEnergyWh?.let { "%.0f Wh".format(it) } ?: "—",
+                fraction = ((state.allTimeTotalEnergyWh ?: 0.0) / 500.0).toFloat(), // 500Wh reference ceiling
+                color = PhosphorGreen
             )
-            ReadingRow(
-                label = "Average Session Duration",
-                value = state.averageSessionDurationMinutes?.let { formatMinutes(it) }
-            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Average Session Duration", style = MaterialTheme.typography.bodyMedium, color = PanelGray)
+                Text(
+                    text = state.averageSessionDurationMinutes?.let { formatMinutesCompact(it) } ?: "—",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = PhosphorGreen
+                )
+            }
         }
     }
 }
@@ -101,36 +183,36 @@ private fun AllTimeSummaryCard(state: StatisticsUiState) {
 @Composable
 private fun DrainRateCard(state: StatisticsUiState) {
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                "Battery Drain (last 7 days)",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            RingMeter(
+                // 3%/hour is a rough "high drain" reference — a healthy idle
+                // drain is usually well under 1.5%/hour, so this scale keeps
+                // normal readings from looking maxed-out.
+                fraction = ((state.drainRate.percentPerHour ?: 0.0) / 3.0).toFloat(),
+                value = state.drainRate.percentPerHour?.let { "%.1f".format(it) } ?: "—",
+                unit = "%/HOUR",
+                color = GraphTemperature,
+                size = 76.dp,
+                strokeWidth = 7.dp
             )
-            ReadingRow(
-                label = "Estimated Drain Rate",
-                value = state.drainRate.percentPerHour?.let { "%.1f".format(it) },
-                unit = "%/hour"
-            )
-            Text(
-                "Based on ${state.drainRate.sampleCount} background samples collected while the device wasn't charging. Samples are taken roughly every 15 minutes to conserve battery.",
-                style = MaterialTheme.typography.bodySmall,
-                color = PanelGray
-            )
+            Column {
+                Text(
+                    "Battery Drain (7 days)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "Based on ${state.drainRate.sampleCount} background samples collected while not charging, taken roughly every 15 minutes.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PanelGray
+                )
+            }
         }
     }
 }
 
-@Composable
-private fun StatBlock(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = PanelGray)
-        Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = PhosphorGreen)
-    }
-}
-
-private fun formatMinutes(minutes: Long): String {
+private fun formatMinutesCompact(minutes: Long): String {
     val h = minutes / 60
     val m = minutes % 60
-    return if (h > 0) "${h}h ${m}m" else "${m}m"
+    return if (h > 0) "${h}h${m}m" else "${m}m"
 }
