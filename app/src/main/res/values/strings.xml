@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ChargeMeter Pro</string>
+    <string name="app_name">ChargeFlow</string>
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_live_monitor">Live Monitor</string>
     <string name="nav_history">History</string>
     <string name="nav_battery_health">Battery Health</string>
-    <string name="nav_statistics">Statistics</string>
+    <string name="nav_statistics">Stats</string>
     <string name="nav_settings">Settings</string>
 
     <!-- Charging status -->
@@ -61,4 +61,7 @@
 
     <!-- Misc -->
     <string name="app_tagline">Precision battery &amp; charging analysis</string>
+
+    <!-- Splash -->
+    <string name="splash_tagline">Powering your charge, intelligently</string>
 </resources>

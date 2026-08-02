@@ -20,4 +20,8 @@
     <color name="hairline">#22303C</color>
     <color name="white">#FFFFFF</color>
     <color name="critical_red">#FF4757</color>
+
+    <!-- Splash screen background — matches instrument_bg so there's no visible
+         flash/mismatch between the splash window and the first Compose frame. -->
+    <color name="splash_background">#0A0E12</color>
 </resources>

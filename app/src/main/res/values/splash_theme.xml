@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        Splash theme backed by androidx.core:core-splashscreen. This works
+        identically (and fully offline — it's pure local resources, no
+        network involved) on API 26 through the latest, unlike the native
+        Android 12+ SplashScreen API alone which isn't available pre-31.
+
+        MainActivity calls installSplashScreen() before super.onCreate()
+        and setContent(), and this is set as MainActivity's theme in the
+        manifest. The activity's real theme (Theme.ChargeMeterPro) takes
+        over automatically once the first Compose frame is drawn.
+    -->
+    <style name="Theme.ChargeFlow.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.ChargeMeterPro</item>
+    </style>
+</resources>
