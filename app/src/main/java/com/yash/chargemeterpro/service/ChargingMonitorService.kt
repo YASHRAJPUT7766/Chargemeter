@@ -23,10 +23,19 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Backs the optional "Always On Charging Monitor" toggle in Settings.
- * ONLY started when the user explicitly enables that toggle (or when
- * charging begins and "Auto-start monitoring" is on) — see
- * SettingsRepository defaults, both are user-controlled.
+ * Backs live charging monitoring, session recording, and Smart Charging
+ * Alerts. Started two different ways:
+ *
+ *  1. The persistent "Always On Charging Monitor" toggle in Settings —
+ *     runs continuously (charging or not) until the user turns it off.
+ *  2. Automatically by PowerConnectionReceiver whenever the charger is
+ *     physically connected (ACTION_POWER_CONNECTED), gated on the
+ *     "Auto-start monitoring" preference (default: on). This is what
+ *     makes background charging monitoring work even if the user never
+ *     opens the app or touches the Always-On toggle — see spec
+ *     requirement #12. In this mode the service stops itself once the
+ *     resulting session ends (see handleSessionLifecycle), so it doesn't
+ *     linger in the background between charges.
  *
  * Responsibilities while running:
  *  1. Auto-start a charging session when plugged in, auto-stop when
@@ -62,6 +71,14 @@ class ChargingMonitorService : Service() {
     private var milestone100Fired = false
     private var lastKnownStatus: ChargingStatus = ChargingStatus.UNKNOWN
 
+    // Guards against a transient plug-in start (mode 2 above) looping
+    // forever if the device is unplugged again before a session ever
+    // actually starts (e.g. a very brief/flaky connection). Without this,
+    // handleSessionLifecycle's stopSelf() call never fires, since it only
+    // runs in the "was charging, now isn't" branch.
+    private var loopIterationsSinceStart = 0
+    private val maxIdleIterationsBeforeSelfStop = 8 // ~2 minutes at the 15s poll interval
+
     override fun onCreate() {
         super.onCreate()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -71,6 +88,7 @@ class ChargingMonitorService : Service() {
         val initialSnapshot = batteryRepository.readSnapshotNow()
         startForegroundCompat(initialSnapshot)
 
+        loopIterationsSinceStart = 0
         serviceJob?.cancel()
         serviceJob = scope.launch { monitorLoop() }
 
@@ -106,6 +124,22 @@ class ChargingMonitorService : Service() {
             refreshForegroundNotification(snapshot)
             com.yash.chargemeterpro.widget.ChargeMeterWidgetUpdater.pushUpdate(applicationContext, snapshot)
             lastKnownStatus = snapshot.chargingStatus
+
+            // Safety valve for transient (plug-in-triggered) starts: if no
+            // session has started after several polls and Always-On isn't
+            // separately enabled, this was likely a spurious/very-brief
+            // connection — stop rather than idle in the background
+            // indefinitely.
+            if (activeSessionId == null && !settingsDataStore.alwaysOnMonitorEnabled.first()) {
+                loopIterationsSinceStart++
+                if (loopIterationsSinceStart >= maxIdleIterationsBeforeSelfStop) {
+                    stopSelf()
+                    return
+                }
+            } else {
+                loopIterationsSinceStart = 0
+            }
+
             delay(ChargingPollScheduler.BACKGROUND_SERVICE_INTERVAL_MS)
         }
     }
@@ -146,6 +180,19 @@ class ChargingMonitorService : Service() {
                     )
                 } else if (!wasFull && settingsDataStore.alertDisconnected.first()) {
                     notificationManager.notifyDisconnected(snapshot.batteryPercent)
+                }
+
+                // This service is started two different ways: (1) the
+                // user's persistent "Always On Charging Monitor" toggle,
+                // which should keep running indefinitely, and (2) a
+                // transient start from PowerConnectionReceiver purely to
+                // cover one charging session when Always-On is off. Only
+                // in case (2) should the service stop itself here —
+                // otherwise it would run forever in the background after
+                // every single charge, defeating the point of it being
+                // "auto" rather than "always".
+                if (!settingsDataStore.alwaysOnMonitorEnabled.first()) {
+                    stopSelf()
                 }
             }
         }

@@ -205,7 +205,7 @@ class ChargeMeterNotificationManager @Inject constructor(
     ): android.app.Notification {
         return NotificationCompat.Builder(context, CHANNEL_MONITOR_SERVICE)
             .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
-            .setContentTitle("ChargeMeter Pro — Always On Monitor")
+            .setContentTitle("ChargeFlow — Charging Monitor")
             .setContentText("$statusText · $batteryPercent% · $wattsText")
             .setContentIntent(contentIntent())
             .setOngoing(true)
