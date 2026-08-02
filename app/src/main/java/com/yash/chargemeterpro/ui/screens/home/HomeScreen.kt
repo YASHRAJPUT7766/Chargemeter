@@ -85,10 +85,6 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            HomeHeader(snapshot = snapshot)
-        }
-
-        item {
             HeroWattCard(
                 snapshot = snapshot,
                 timeEstimate = timeEstimate,
@@ -115,22 +111,6 @@ fun HomeScreen(
         item {
             DisclaimerText(text = PowerTerminology.WATTAGE_ESTIMATE_DISCLAIMER)
         }
-    }
-}
-
-@Composable
-private fun HomeHeader(snapshot: BatterySnapshot?) {
-    Column {
-        Text(
-            text = "ChargeMeter Pro",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Precision battery & charging analysis",
-            style = MaterialTheme.typography.bodySmall,
-            color = PanelGray
-        )
     }
 }
 
