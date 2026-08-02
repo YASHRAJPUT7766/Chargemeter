@@ -1,8 +1,10 @@
 package com.yash.chargemeterpro.ui.screens.batteryhealth
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +28,10 @@ import com.yash.chargemeterpro.domain.usecase.PowerTerminology
 import com.yash.chargemeterpro.ui.components.DisclaimerText
 import com.yash.chargemeterpro.ui.components.InstrumentCard
 import com.yash.chargemeterpro.ui.components.ReadingRow
+import com.yash.chargemeterpro.ui.components.RingMeter
+import com.yash.chargemeterpro.ui.components.StatusBadgeRow
 import com.yash.chargemeterpro.ui.theme.CriticalRed
+import com.yash.chargemeterpro.ui.theme.GraphTemperature
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
 import com.yash.chargemeterpro.ui.theme.VoltageBlue
@@ -41,10 +46,6 @@ fun BatteryHealthScreen(viewModel: BatteryHealthViewModel = hiltViewModel()) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            Text("Battery Health", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        }
-
         item {
             HealthScoreCard(result = state.healthScoreResult)
         }
@@ -71,7 +72,7 @@ private fun HealthScoreCard(result: BatteryHealthScorer.HealthScoreResult?) {
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                    Box(contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(
                             progress = { result.value / 100f },
                             modifier = Modifier.size(140.dp),
@@ -127,34 +128,51 @@ private fun scoreColor(score: Int) = when {
 private fun DiagnosticsCard(state: BatteryHealthUiState) {
     val snapshot = state.snapshot
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("Diagnostics", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            ReadingRow(label = "Battery Percentage", value = snapshot?.batteryPercent?.toString(), unit = "%")
-            ReadingRow(label = "Charging Status", value = snapshot?.chargingStatus?.name)
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                RingMeter(
+                    fraction = (snapshot?.batteryPercent ?: 0) / 100f,
+                    value = snapshot?.batteryPercent?.toString() ?: "—",
+                    unit = "BATTERY",
+                    color = PhosphorGreen
+                )
+                RingMeter(
+                    fraction = ((snapshot?.temperatureC ?: 0.0) / 45.0).toFloat(),
+                    value = snapshot?.temperatureC?.let { "%.0f".format(it) } ?: "—",
+                    unit = "BATT °C",
+                    color = GraphTemperature
+                )
+                RingMeter(
+                    fraction = (((state.deviceSkinTempC as? AvailableOr.Value)?.value ?: 0.0) / 45.0).toFloat(),
+                    value = (state.deviceSkinTempC as? AvailableOr.Value)?.value?.let { "%.0f".format(it) } ?: "—",
+                    unit = "SKIN °C",
+                    color = WarningAmber
+                )
+            }
+
+            StatusBadgeRow(label = "Charging Status", value = snapshot?.chargingStatus?.name, accentColor = PhosphorGreen)
+            StatusBadgeRow(label = "Health Status", value = snapshot?.health?.name, accentColor = VoltageBlue)
+            StatusBadgeRow(label = "Technology", value = snapshot?.technology?.orNull(), accentColor = PanelGray)
+            StatusBadgeRow(
+                label = "Charging Policy",
+                value = (snapshot?.chargingPolicy as? AvailableOr.Value)?.value?.name,
+                accentColor = PanelGray
+            )
+
             ReadingRow(label = "Voltage", value = snapshot?.voltageVolts?.let { "%.3f".format(it) }, unit = "V")
             ReadingRow(
                 label = "Current",
                 value = snapshot?.currentMilliAmpsNormalized?.let { "%.1f".format(it) },
                 unit = "mA"
             )
-            ReadingRow(label = "Battery Temperature", value = snapshot?.temperatureC?.let { "%.1f".format(it) }, unit = "°C")
-            ReadingRow(
-                label = "Device Skin Temperature",
-                value = (state.deviceSkinTempC as? AvailableOr.Value)?.value?.let { "%.1f".format(it) },
-                unit = "°C"
-            )
-            ReadingRow(label = "Health Status", value = snapshot?.health?.name)
-            ReadingRow(label = "Technology", value = snapshot?.technology?.orNull())
             ReadingRow(
                 label = "Charge Counter",
                 value = (snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value?.let { "%.0f".format(it / 1000.0) },
                 unit = "mAh"
             )
             ReadingRow(label = "Cycle Count", value = snapshot?.cycleCount?.orNull()?.toString())
-            ReadingRow(
-                label = "Charging Policy",
-                value = (snapshot?.chargingPolicy as? AvailableOr.Value)?.value?.name
-            )
         }
     }
 }
