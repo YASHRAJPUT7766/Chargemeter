@@ -3,6 +3,9 @@ package com.yash.chargemeterpro.ui.screens.settings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,8 +15,10 @@ import com.yash.chargemeterpro.service.ChargingMonitorService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -110,5 +115,42 @@ class SettingsViewModel @Inject constructor(
     fun setNotificationSound(uri: Uri?) {
         viewModelScope.launch { settingsDataStore.setNotificationSoundUri(uri?.toString()) }
         notificationManager.applyCustomSound(uri)
+    }
+
+    // --- Battery optimization exemption ---
+    // There's no OS callback for "the user changed this in system
+    // settings", so this is refreshed manually (see refreshBatteryOptimizationStatus,
+    // called from SettingsScreen's lifecycle-resume) rather than being a
+    // reactive Flow like everything else in this ViewModel.
+    private val _isIgnoringBatteryOptimizations = MutableStateFlow(checkIgnoringBatteryOptimizations())
+    val isIgnoringBatteryOptimizations: StateFlow<Boolean> = _isIgnoringBatteryOptimizations.asStateFlow()
+
+    private fun checkIgnoringBatteryOptimizations(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        val powerManager = appContext.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return true
+        return powerManager.isIgnoringBatteryOptimizations(appContext.packageName)
+    }
+
+    fun refreshBatteryOptimizationStatus() {
+        _isIgnoringBatteryOptimizations.value = checkIgnoringBatteryOptimizations()
+    }
+
+    /**
+     * Launches the system's per-app "ignore battery optimizations" prompt.
+     * This is the standard, user-consented way to request the exemption —
+     * there's no way to grant it silently, and Google Play policy
+     * requires this be an explicit, user-initiated action (which it is
+     * here: the user taps a button in Settings), not something requested
+     * automatically on first launch.
+     */
+    fun requestIgnoreBatteryOptimizations(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val intent = Intent(
+            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            Uri.parse("package:${context.packageName}")
+        ).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
     }
 }

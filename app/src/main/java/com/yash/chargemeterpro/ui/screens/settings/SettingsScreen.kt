@@ -35,6 +35,17 @@ fun SettingsScreen(
     onNavigateToPrivacyPolicy: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshBatteryOptimizationStatus()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -181,6 +192,8 @@ private fun MonitoringSection(vm: SettingsViewModel) {
     val alwaysOn by vm.alwaysOnMonitorEnabled.collectAsStateWithLifecycle()
     val autoStart by vm.autoStartMonitoring.collectAsStateWithLifecycle()
     val screenOnStats by vm.screenOnStatsEnabled.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isIgnoringBatteryOptimizations by vm.isIgnoringBatteryOptimizations.collectAsStateWithLifecycle()
 
     Column {
         SectionHeader("Monitoring")
@@ -204,6 +217,30 @@ private fun MonitoringSection(vm: SettingsViewModel) {
                     checked = screenOnStats,
                     onCheckedChange = vm::setScreenOnStatsEnabled
                 )
+            }
+        }
+
+        if (!isIgnoringBatteryOptimizations) {
+            androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 8.dp))
+            InstrumentCard(modifier = Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Improve background reliability",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        "Android's default battery-saving rules can occasionally block charging monitoring from starting automatically in the background. Exempting ChargeFlow from battery optimization makes auto-start monitoring and alerts fire reliably.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PanelGray
+                    )
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = { vm.requestIgnoreBatteryOptimizations(context) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Allow ChargeFlow to run in the background")
+                    }
+                }
             }
         }
     }
