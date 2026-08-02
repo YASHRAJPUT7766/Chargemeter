@@ -77,7 +77,7 @@ jobs:
       - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChargeMeterPro-release-apk
+          name: ChargeFlow-release-apk
           path: app/build/outputs/apk/release/*.apk
 
       # Renames the APK to something stable/readable, then creates (or updates)
@@ -87,17 +87,17 @@ jobs:
       - name: Rename APK for release
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/release/*.apk release/ChargeMeterPro-release.apk
+          cp app/build/outputs/apk/release/*.apk release/ChargeFlow-release.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: ChargeMeter Pro — Build #${{ github.run_number }}
+          name: ChargeFlow — Build #${{ github.run_number }}
           body: |
             Automated signed release build from commit ${{ github.sha }}.
-            Download `ChargeMeterPro-release.apk` below and install it on your Android device.
-          files: release/ChargeMeterPro-release.apk
+            Download `ChargeFlow-release.apk` below and install it on your Android device.
+          files: release/ChargeFlow-release.apk
           draft: false
           prerelease: true
         env:
