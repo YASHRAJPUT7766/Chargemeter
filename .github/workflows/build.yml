@@ -37,6 +37,7 @@ jobs:
             /tmp/gradle-8.9/bin/gradle wrapper --gradle-version 8.9
           fi
           chmod +x ./gradlew
+
       # Downloads the two font families the README calls out as
       # intentionally excluded, and places them with the exact filenames
       # Type.kt expects.
@@ -57,14 +58,27 @@ jobs:
           # Remove any leftover README so the resource merger doesn't fail on it.
           rm -f README.md
           ls -la
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload APK artifact
+      # Decodes the base64 keystore secret back into a real .jks file on the
+      # runner's filesystem, and exports the paths/passwords as env vars that
+      # app/build.gradle.kts already reads (CMP_KEYSTORE_PATH etc.) to sign
+      # the release build.
+      - name: Decode signing keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "CMP_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          echo "CMP_KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "CMP_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "CMP_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ChargeMeterPro-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: ChargeMeterPro-release-apk
+          path: app/build/outputs/apk/release/*.apk
 
       # Renames the APK to something stable/readable, then creates (or updates)
       # a GitHub Release tagged by run number and attaches the APK to it.
@@ -73,7 +87,7 @@ jobs:
       - name: Rename APK for release
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/debug/*.apk release/ChargeMeterPro-debug.apk
+          cp app/build/outputs/apk/release/*.apk release/ChargeMeterPro-release.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -81,9 +95,9 @@ jobs:
           tag_name: build-${{ github.run_number }}
           name: ChargeMeter Pro — Build #${{ github.run_number }}
           body: |
-            Automated build from commit ${{ github.sha }}.
-            Download `ChargeMeterPro-debug.apk` below and install it on your Android device.
-          files: release/ChargeMeterPro-debug.apk
+            Automated signed release build from commit ${{ github.sha }}.
+            Download `ChargeMeterPro-release.apk` below and install it on your Android device.
+          files: release/ChargeMeterPro-release.apk
           draft: false
           prerelease: true
         env:
