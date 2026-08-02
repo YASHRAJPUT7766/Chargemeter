@@ -1,19 +1,23 @@
 package com.yash.chargemeterpro.ui.screens.sessiondetail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -25,22 +29,40 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yash.chargemeterpro.domain.usecase.PowerTerminology
+import com.yash.chargemeterpro.ui.components.CapsuleMeterRow
 import com.yash.chargemeterpro.ui.components.DisclaimerText
 import com.yash.chargemeterpro.ui.components.InstrumentCard
-import com.yash.chargemeterpro.ui.components.LiveLineChart
 import com.yash.chargemeterpro.ui.components.ReadingRow
-import com.yash.chargemeterpro.ui.screens.livemonitor.GraphPoint
-import com.yash.chargemeterpro.ui.theme.GraphWattage
+import com.yash.chargemeterpro.ui.components.RingMeter
+import com.yash.chargemeterpro.ui.components.StatusBadgeRow
+import com.yash.chargemeterpro.ui.theme.GraphTemperature
+import com.yash.chargemeterpro.ui.theme.Hairline
+import com.yash.chargemeterpro.ui.theme.PanelGray
+import com.yash.chargemeterpro.ui.theme.PhosphorGreen
+import com.yash.chargemeterpro.ui.theme.PhosphorGreenDim
+import com.yash.chargemeterpro.ui.theme.VoltageBlue
+import com.yash.chargemeterpro.ui.theme.WarningAmber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * A completed session's summary — redesigned around rings/capsule bars
+ * instead of a plotted "wattage over time" line chart, per the
+ * ChargeFlow spec's no-line-charts rule. The underlying per-sample data
+ * (state.samples) is still collected and still exportable via CSV/PDF —
+ * nothing about session recording was removed, just how the power
+ * range is *visualized* on this screen: as a min/avg/max comparison
+ * instead of a time-series plot.
+ */
 @Composable
 fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionDetailViewModel = hiltViewModel()) {
     LaunchedEffect(sessionId) { viewModel.load(sessionId) }
@@ -118,10 +140,37 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionD
 
             item {
                 InstrumentCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ReadingRow(label = "Start Battery", value = session.startBatteryPercent.toString(), unit = "%")
-                        ReadingRow(label = "End Battery", value = session.endBatteryPercent?.toString(), unit = "%")
-                        ReadingRow(label = "Plug Type", value = session.plugTypeName)
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            RingMeter(
+                                fraction = ((session.averagePowerWatts ?: 0.0) / 30.0).toFloat(),
+                                value = session.averagePowerWatts?.let { "%.1f".format(it) } ?: "—",
+                                unit = "AVG W",
+                                color = PhosphorGreen
+                            )
+                            RingMeter(
+                                fraction = ((session.maxPowerWatts ?: 0.0) / 30.0).toFloat(),
+                                value = session.maxPowerWatts?.let { "%.1f".format(it) } ?: "—",
+                                unit = "PEAK W",
+                                color = WarningAmber
+                            )
+                            RingMeter(
+                                fraction = ((session.averageCurrentMilliAmps ?: 0.0) / 3000.0).toFloat(),
+                                value = session.averageCurrentMilliAmps?.let { "%.0f".format(it) } ?: "—",
+                                unit = "AVG mA",
+                                color = VoltageBlue
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+                        BatteryChangeBar(
+                            startPercent = session.startBatteryPercent,
+                            endPercent = session.endBatteryPercent
+                        )
+
+                        StatusBadgeRow(label = "Plug Type", value = session.plugTypeName, accentColor = PhosphorGreen)
+
                         ReadingRow(
                             label = "Duration",
                             value = session.endTimeMillis?.let {
@@ -130,54 +179,24 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionD
                             }
                         )
                         ReadingRow(
-                            label = "Average Current",
-                            value = session.averageCurrentMilliAmps?.let { "%.0f".format(it) },
-                            unit = "mA"
-                        )
-                        ReadingRow(
-                            label = "Average Power",
-                            value = session.averagePowerWatts?.let { "%.2f".format(it) },
-                            unit = "W"
-                        )
-                        ReadingRow(
-                            label = "Max Power",
-                            value = session.maxPowerWatts?.let { "%.2f".format(it) },
-                            unit = "W"
-                        )
-                        ReadingRow(
                             label = "Max Current",
                             value = session.maxCurrentMilliAmps?.let { "%.0f".format(it) },
                             unit = "mA"
-                        )
-                        ReadingRow(
-                            label = "Temperature Range",
-                            value = if (session.minTemperatureCelsius != null && session.maxTemperatureCelsius != null) {
-                                "%.1f – %.1f".format(session.minTemperatureCelsius, session.maxTemperatureCelsius)
-                            } else null,
-                            unit = "°C"
                         )
                         ReadingRow(
                             label = "Estimated Energy",
                             value = session.estimatedEnergyWattHours?.let { "%.2f".format(it) },
                             unit = "Wh"
                         )
-                    }
-                }
-            }
 
-            item {
-                InstrumentCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Text(
-                            "Wattage Over This Session",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        val points = state.samples.mapNotNull { s ->
-                            s.powerWatts?.let { GraphPoint(s.timestampMillis, it.toFloat()) }
+                        if (session.minTemperatureCelsius != null && session.maxTemperatureCelsius != null) {
+                            CapsuleMeterRow(
+                                label = "Temperature Range",
+                                valueText = "%.1f – %.1f°C".format(session.minTemperatureCelsius, session.maxTemperatureCelsius),
+                                fraction = ((session.maxTemperatureCelsius) / 45.0).toFloat(),
+                                color = GraphTemperature
+                            )
                         }
-                        LiveLineChart(points = points, lineColor = GraphWattage, unitSuffix = "W")
                     }
                 }
             }
@@ -185,6 +204,43 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionD
             item {
                 DisclaimerText(text = PowerTerminology.WATTAGE_ESTIMATE_DISCLAIMER)
             }
+        }
+    }
+}
+
+@Composable
+private fun BatteryChangeBar(startPercent: Int, endPercent: Int?) {
+    val resolvedEnd = endPercent ?: startPercent
+    val endFraction = (resolvedEnd / 100f).coerceIn(0f, 1f)
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Battery Change", style = MaterialTheme.typography.bodyMedium, color = PanelGray)
+            Text(
+                text = if (endPercent != null) "$startPercent% → $endPercent%" else "$startPercent% → …",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = PhosphorGreen
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(50))
+                .background(Hairline)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction = endFraction.coerceAtLeast(0.02f))
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(50))
+                    .background(Brush.horizontalGradient(listOf(PhosphorGreenDim, PhosphorGreen)))
+            )
         }
     }
 }
