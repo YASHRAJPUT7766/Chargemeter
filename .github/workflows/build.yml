@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,7 +37,6 @@ jobs:
             /tmp/gradle-8.9/bin/gradle wrapper --gradle-version 8.9
           fi
           chmod +x ./gradlew
-
       # Downloads the two font families the README calls out as
       # intentionally excluded, and places them with the exact filenames
       # Type.kt expects.
@@ -42,25 +44,19 @@ jobs:
         run: |
           mkdir -p app/src/main/res/font
           cd app/src/main/res/font
-
           FONTS_REPO="https://raw.githubusercontent.com/google/fonts/main"
-
           curl -sL -o jetbrains_mono_regular.ttf   "$FONTS_REPO/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
           curl -sL -o jetbrains_mono_medium.ttf    "$FONTS_REPO/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
           curl -sL -o jetbrains_mono_semibold.ttf  "$FONTS_REPO/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
           curl -sL -o jetbrains_mono_bold.ttf      "$FONTS_REPO/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
-
           curl -sL -o inter_regular.ttf   "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
           curl -sL -o inter_medium.ttf    "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
           curl -sL -o inter_semibold.ttf  "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
           curl -sL -o inter_bold.ttf      "$FONTS_REPO/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
-
           # Android's res/font directory only allows font files (.ttf/.otf/.ttc/.xml).
           # Remove any leftover README so the resource merger doesn't fail on it.
           rm -f README.md
-
           ls -la
-
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
@@ -69,3 +65,26 @@ jobs:
         with:
           name: ChargeMeterPro-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+
+      # Renames the APK to something stable/readable, then creates (or updates)
+      # a GitHub Release tagged by run number and attaches the APK to it.
+      # This gives every push a public, downloadable link under the repo's
+      # "Releases" tab — no manual upload needed.
+      - name: Rename APK for release
+        run: |
+          mkdir -p release
+          cp app/build/outputs/apk/debug/*.apk release/ChargeMeterPro-debug.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: ChargeMeter Pro — Build #${{ github.run_number }}
+          body: |
+            Automated build from commit ${{ github.sha }}.
+            Download `ChargeMeterPro-debug.apk` below and install it on your Android device.
+          files: release/ChargeMeterPro-debug.apk
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
