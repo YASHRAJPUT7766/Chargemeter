@@ -108,6 +108,8 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.3.1")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.4")
+    // --- Splash screen (system SplashScreen API, back-compat down to API 26) ---
+    implementation("androidx.core:core-splashscreen:1.2.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
@@ -134,8 +136,10 @@ dependencies {
     implementation("androidx.glance:glance-material3:1.1.1")
 
     // --- Charts (live graphs: wattage/current/voltage/% /temp vs time) ---
-    implementation("com.patrykandpatrick.vico:compose:2.0.0-beta.4")
-    implementation("com.patrykandpatrick.vico:compose-m3:2.0.0-beta.4")
+    // (Vico charting library removed — ChargeFlow's design deliberately
+    // avoids traditional line charts anywhere in the app, see
+    // LiveMonitorScreen/SessionDetailScreen/StatisticsScreen for the
+    // ring-meter/capsule-bar alternatives used instead.)
 
     // --- Kotlin ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
