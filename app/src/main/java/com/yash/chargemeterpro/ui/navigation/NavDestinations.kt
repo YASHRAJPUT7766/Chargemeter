@@ -2,18 +2,20 @@ package com.yash.chargemeterpro.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Bottom-nav top-level destinations (spec: Home, Live Monitor, Charging
- * History, Battery Health, Statistics, Settings) plus secondary routes
- * reached by drilling in from those (session detail, speed test, about,
- * etc.), which intentionally do NOT get their own bottom-nav entry.
+ * Bottom-nav top-level destinations — exactly 4, per the ChargeFlow spec:
+ * Home, Stats, History, Settings.
+ *
+ * Live Monitor and Battery Health are NOT deleted — all of their existing
+ * functionality (graphs, charger analysis, health scoring) is fully
+ * intact, they're just reached as drill-ins instead of getting their own
+ * bottom-nav slot: Live Monitor from Home's "Open Live Monitor" action,
+ * Battery Health from a card on the Stats screen.
  */
 sealed class Destination(val route: String) {
     data object Home : Destination("home")
@@ -43,9 +45,7 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem(Destination.Home, "Home", Icons.Filled.Home),
-    BottomNavItem(Destination.LiveMonitor, "Monitor", Icons.Filled.Bolt),
-    BottomNavItem(Destination.History, "History", Icons.Filled.History),
-    BottomNavItem(Destination.BatteryHealth, "Health", Icons.Filled.FavoriteBorder),
     BottomNavItem(Destination.Statistics, "Stats", Icons.Filled.BarChart),
+    BottomNavItem(Destination.History, "History", Icons.Filled.History),
     BottomNavItem(Destination.Settings, "Settings", Icons.Filled.Settings)
 )

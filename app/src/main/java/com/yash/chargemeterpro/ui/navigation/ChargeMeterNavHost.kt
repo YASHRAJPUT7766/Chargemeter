@@ -1,5 +1,7 @@
 package com.yash.chargemeterpro.ui.navigation
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,6 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.yash.chargemeterpro.ui.components.ChargeFlowTopBar
 import com.yash.chargemeterpro.ui.screens.about.AboutScreen
 import com.yash.chargemeterpro.ui.screens.about.PrivacyPolicyScreen
 import com.yash.chargemeterpro.ui.screens.batteryhealth.BatteryHealthScreen
@@ -39,6 +42,15 @@ fun ChargeMeterNavHost() {
     val showBottomBar = bottomNavItems.any { it.destination.route == currentRoute }
 
     Scaffold(
+        topBar = {
+            // Consistent ChargeFlow logo + name header on every top-level
+            // (bottom-nav) screen. Drill-in screens (Live Monitor, Battery
+            // Health, Session Detail, etc.) render their own
+            // ScreenBackTopBar instead, since those need a back action.
+            if (showBottomBar) {
+                ChargeFlowTopBar()
+            }
+        },
         bottomBar = {
             if (showBottomBar) {
                 ChargeMeterBottomBar(navController = navController, currentRoute = currentRoute)
@@ -57,7 +69,13 @@ fun ChargeMeterNavHost() {
                 )
             }
             composable(Destination.LiveMonitor.route) {
-                LiveMonitorScreen()
+                Column(modifier = Modifier.fillMaxSize()) {
+                    ScreenBackTopBar(
+                        title = "Live Monitor",
+                        onBack = { navController.popBackStack() }
+                    )
+                    LiveMonitorScreen()
+                }
             }
             composable(Destination.History.route) {
                 HistoryScreen(
@@ -68,10 +86,18 @@ fun ChargeMeterNavHost() {
                 )
             }
             composable(Destination.BatteryHealth.route) {
-                BatteryHealthScreen()
+                Column(modifier = Modifier.fillMaxSize()) {
+                    ScreenBackTopBar(
+                        title = "Battery Health",
+                        onBack = { navController.popBackStack() }
+                    )
+                    BatteryHealthScreen()
+                }
             }
             composable(Destination.Statistics.route) {
-                StatisticsScreen()
+                StatisticsScreen(
+                    onNavigateToBatteryHealth = { navController.navigate(Destination.BatteryHealth.route) }
+                )
             }
             composable(Destination.Settings.route) {
                 SettingsScreen(
