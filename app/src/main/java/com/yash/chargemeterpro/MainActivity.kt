@@ -1,12 +1,14 @@
 package com.yash.chargemeterpro
 
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.yash.chargemeterpro.ui.components.NotificationPermissionRequester
 import com.yash.chargemeterpro.ui.navigation.ChargeMeterNavHost
 import com.yash.chargemeterpro.ui.theme.ChargeMeterProTheme
@@ -20,8 +22,23 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var drainMonitorWorkScheduler: DrainMonitorWorkScheduler
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must be called before super.onCreate() so the system draws the
+        // splash window immediately on cold start, straight from local
+        // resources — no network or database read is on this path, which
+        // is what removes the old "jump straight to main screen" lag.
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Hold the splash for a short fixed minimum so it reads as an
+        // intentional brand moment instead of a flicker, capped well
+        // under the ~2s target from cold start. Pure local timer — works
+        // identically with or without connectivity.
+        val splashStartMillis = SystemClock.elapsedRealtime()
+        val minimumSplashDurationMillis = 700L
+        splashScreen.setKeepOnScreenCondition {
+            SystemClock.elapsedRealtime() - splashStartMillis < minimumSplashDurationMillis
+        }
 
         // Ensure the drain-monitor background job is scheduled from first
         // launch, independent of whether Always-On Monitor is enabled —
