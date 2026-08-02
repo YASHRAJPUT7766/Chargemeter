@@ -62,7 +62,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.ChargeMeterPro"
+            android:theme="@style/Theme.ChargeFlow.Splash"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
             android:launchMode="singleTop">
             <intent-filter>
@@ -88,6 +88,23 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Auto-starts background charging monitoring the moment the charger
+             is physically connected, regardless of whether the user has ever
+             opened the app or touched the Always-On Monitor toggle in
+             Settings — this is what makes charging sessions get recorded
+             (and Smart Charging Alerts fire) in the background by default,
+             gated only by the "Auto-start monitoring" preference (on by
+             default). Must be manifest-declared (not registered at runtime)
+             for reliable delivery of this implicit system broadcast on
+             Android 8+. -->
+        <receiver
+            android:name=".service.PowerConnectionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
             </intent-filter>
         </receiver>
 
