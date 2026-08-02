@@ -145,7 +145,7 @@ private fun DiagnosticsCard(state: BatteryHealthUiState) {
                     color = GraphTemperature
                 )
                 RingMeter(
-                    fraction = (((state.deviceSkinTempC as? AvailableOr.Value)?.value ?: 0.0) / 45.0).toFloat(),
+                    fraction = (((state.deviceSkinTempC as? AvailableOr.Value)?.value ?: 0f) / 45f),
                     value = (state.deviceSkinTempC as? AvailableOr.Value)?.value?.let { "%.0f".format(it) } ?: "—",
                     unit = "SKIN °C",
                     color = WarningAmber
