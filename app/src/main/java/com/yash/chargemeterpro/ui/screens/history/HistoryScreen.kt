@@ -1,10 +1,13 @@
 package com.yash.chargemeterpro.ui.screens.history
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Delete
@@ -33,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -71,11 +77,11 @@ fun HistoryScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Charging History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Row {
                 IconButton(onClick = onCompareSessions) {
                     Icon(Icons.Filled.CompareArrows, contentDescription = "Compare sessions")
@@ -176,31 +182,33 @@ private fun SessionRow(session: ChargingSessionEntity, onClick: () -> Unit, onDe
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onClick() },
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                com.yash.chargemeterpro.ui.components.RingMeter(
+                    fraction = ((session.averagePowerWatts ?: 0.0) / 30.0).toFloat(),
+                    value = session.averagePowerWatts?.let { "%.0f".format(it) } ?: "—",
+                    unit = "W",
+                    color = PhosphorGreen,
+                    size = 56.dp,
+                    strokeWidth = 5.dp
+                )
+
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         formatSessionDate(session.startTimeMillis),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Text(
-                        "${session.startBatteryPercent}% → ${session.endBatteryPercent ?: "…"}%  ·  ${formatDuration(session)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PanelGray
+                    Spacer(modifier = Modifier.height(6.dp))
+                    BatteryChangeBar(
+                        startPercent = session.startBatteryPercent,
+                        endPercent = session.endBatteryPercent
                     )
-                }
-                Column(horizontalAlignment = Alignment.End) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        session.averagePowerWatts?.let { "%.1f W avg".format(it) } ?: "—",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = PhosphorGreen
-                    )
-                    Text(
-                        session.maxPowerWatts?.let { "%.1f W peak".format(it) } ?: "",
-                        style = MaterialTheme.typography.bodySmall,
+                        formatDuration(session),
+                        style = MaterialTheme.typography.labelSmall,
                         color = PanelGray
                     )
                 }
@@ -218,7 +226,7 @@ private fun SessionRow(session: ChargingSessionEntity, onClick: () -> Unit, onDe
                         modifier = Modifier.size(16.dp),
                         tint = PanelGray
                     )
-                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Delete", style = MaterialTheme.typography.labelMedium, color = PanelGray)
                 }
             }
@@ -240,6 +248,47 @@ private fun SessionRow(session: ChargingSessionEntity, onClick: () -> Unit, onDe
                 )
             }
         }
+    }
+}
+
+/**
+ * Visual battery-level-change indicator: a single capsule track with two
+ * overlaid fills — a dim one at the session's start level, a bright one
+ * at its end level — plus the numeric start/end percentages as small
+ * labels at each end. Replaces the old plain "58% -> 92%" text with
+ * something a user can read at a glance without parsing digits.
+ */
+@Composable
+private fun BatteryChangeBar(startPercent: Int, endPercent: Int?) {
+    val resolvedEnd = endPercent ?: startPercent
+    val endFraction = (resolvedEnd / 100f).coerceIn(0f, 1f)
+
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .background(com.yash.chargemeterpro.ui.theme.Hairline)
+        ) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction = endFraction.coerceAtLeast(0.02f))
+                    .fillMaxHeight()
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                    .background(
+                        androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            listOf(com.yash.chargemeterpro.ui.theme.PhosphorGreenDim, PhosphorGreen)
+                        )
+                    )
+            )
+        }
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = if (endPercent != null) "$startPercent% → $endPercent%" else "$startPercent% → charging…",
+            style = MaterialTheme.typography.labelSmall,
+            color = PanelGray
+        )
     }
 }
 
