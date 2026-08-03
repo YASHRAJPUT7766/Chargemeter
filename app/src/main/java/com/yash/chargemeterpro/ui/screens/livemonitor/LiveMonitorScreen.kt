@@ -295,7 +295,7 @@ private fun LiveReadingsCard(state: LiveMonitorUiState) {
                     strokeWidth = 7.dp
                 )
                 RingMeter(
-                    fraction = (((snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value ?: 0.0) / 5_000_000.0).toFloat(),
+                    fraction = (((snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value?.toDouble() ?: 0.0) / 5_000_000.0).toFloat(),
                     value = (snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value?.let { "%.0f".format(it / 1000.0) } ?: "—",
                     unit = "mAh",
                     color = GraphBatteryPct,
