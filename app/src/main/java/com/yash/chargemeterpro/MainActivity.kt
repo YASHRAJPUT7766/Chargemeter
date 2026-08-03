@@ -58,7 +58,10 @@ class MainActivity : ComponentActivity() {
 
             ChargeMeterProTheme(darkTheme = darkTheme, useDynamicColor = useDynamicColor) {
                 NotificationPermissionRequester()
-                ChargeMeterNavHost()
+                ChargeMeterNavHost(
+                    isDarkTheme = darkTheme,
+                    onToggleTheme = { viewModel.toggleTheme(currentlyResolvedDark = darkTheme) }
+                )
             }
         }
     }
