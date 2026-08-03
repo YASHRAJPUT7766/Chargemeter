@@ -298,11 +298,14 @@ private fun TypewriterFeatureRow(text: String, play: Boolean) {
 
 @Composable
 private fun BrandMark(size: Dp) {
-    // The app's real launcher icon (adaptive icon foreground/background),
-    // not a redrawn approximation — same asset used for the Play Store
-    // listing and home-screen icon.
+    // Uses the plain PNG toolbar-logo asset (already used by
+    // ChargeFlowTopBar) rather than R.mipmap.ic_launcher — the launcher
+    // icon is an <adaptive-icon> XML, and painterResource() only supports
+    // VectorDrawables and rasterized assets (PNG/JPG/WEBP), so loading
+    // the adaptive mipmap directly crashes with IllegalArgumentException
+    // on first launch. This PNG is the same artwork without that wrapper.
     androidx.compose.foundation.Image(
-        painter = androidx.compose.ui.res.painterResource(id = com.yash.chargemeterpro.R.mipmap.ic_launcher),
+        painter = androidx.compose.ui.res.painterResource(id = com.yash.chargemeterpro.R.drawable.ic_toolbar_logo),
         contentDescription = null,
         modifier = Modifier
             .size(size)
