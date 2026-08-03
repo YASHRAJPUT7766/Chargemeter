@@ -37,9 +37,13 @@ import com.yash.chargemeterpro.domain.usecase.ChargingSpeed
 import com.yash.chargemeterpro.domain.usecase.PowerTerminology
 import com.yash.chargemeterpro.ui.LiveBatteryStateViewModel
 import com.yash.chargemeterpro.ui.components.DisclaimerText
+import com.yash.chargemeterpro.ui.components.GaugeZone
 import com.yash.chargemeterpro.ui.components.InstrumentCard
+import com.yash.chargemeterpro.ui.components.NeedleGauge
 import com.yash.chargemeterpro.ui.components.ReadingRow
+import com.yash.chargemeterpro.ui.components.RingMeter
 import com.yash.chargemeterpro.ui.components.WattMeterGauge
+import com.yash.chargemeterpro.ui.theme.GraphTemperature
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
 import com.yash.chargemeterpro.ui.theme.SpeedFast
@@ -47,6 +51,7 @@ import com.yash.chargemeterpro.ui.theme.SpeedNormal
 import com.yash.chargemeterpro.ui.theme.SpeedSlow
 import com.yash.chargemeterpro.ui.theme.SpeedTrickle
 import com.yash.chargemeterpro.ui.theme.VoltageBlue
+import com.yash.chargemeterpro.ui.theme.WarningAmber
 
 /**
  * The Home screen deliberately mirrors the exact layout sketched in the
@@ -138,31 +143,47 @@ private fun HeroWattCard(
             val powerWatts = snapshot?.let {
                 com.yash.chargemeterpro.domain.usecase.PowerCalculator.batteryInputPowerWatts(it)
             }
-            WattMeterGauge(
-                currentWatts = powerWatts,
-                maxScaleWatts = 30.0,
-                voltageLabel = snapshot?.voltageVolts?.let { "%.2fV".format(it) },
-                currentLabel = snapshot?.currentMilliAmpsNormalized?.let { "%.0fmA".format(it) },
-                modifier = Modifier.fillMaxWidth(0.72f)
+            NeedleGauge(
+                fraction = ((powerWatts ?: 0.0) / 30.0).toFloat(),
+                value = powerWatts?.let { "%.1f".format(it) } ?: "—",
+                unit = "WATTS",
+                minLabel = "0",
+                maxLabel = "30W",
+                zones = listOf(
+                    GaugeZone(0f, 0.25f, WarningAmber),
+                    GaugeZone(0.25f, 0.6f, VoltageBlue),
+                    GaugeZone(0.6f, 1f, PhosphorGreen)
+                ),
+                needleColor = PhosphorGreen,
+                modifier = Modifier.fillMaxWidth(0.85f)
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                ReadingRow(
-                    label = "Current",
-                    value = snapshot?.currentMilliAmpsNormalized?.let { "%.0f".format(it) },
-                    unit = "mA"
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                RingMeter(
+                    fraction = ((snapshot?.currentMilliAmpsNormalized ?: 0.0) / 3000.0).toFloat(),
+                    value = snapshot?.currentMilliAmpsNormalized?.let { "%.0f".format(it) } ?: "—",
+                    unit = "mA",
+                    color = WarningAmber,
+                    size = 82.dp,
+                    strokeWidth = 7.dp
                 )
-                ReadingRow(
-                    label = "Voltage",
-                    value = snapshot?.voltageVolts?.let { "%.2f".format(it) },
-                    unit = "V"
+                RingMeter(
+                    fraction = ((snapshot?.voltageVolts ?: 0.0) / 5.0).toFloat(),
+                    value = snapshot?.voltageVolts?.let { "%.2f".format(it) } ?: "—",
+                    unit = "V",
+                    color = VoltageBlue,
+                    size = 82.dp,
+                    strokeWidth = 7.dp
                 )
-                ReadingRow(
-                    label = "Temperature",
-                    value = snapshot?.temperatureC?.let { "%.1f".format(it) },
-                    unit = "°C"
+                RingMeter(
+                    fraction = ((snapshot?.temperatureC ?: 0.0) / 45.0).toFloat(),
+                    value = snapshot?.temperatureC?.let { "%.1f".format(it) } ?: "—",
+                    unit = "°C",
+                    color = GraphTemperature,
+                    size = 82.dp,
+                    strokeWidth = 7.dp
                 )
             }
 
@@ -277,14 +298,28 @@ private fun QuickActionsRow(onSpeedTest: () -> Unit, onLiveMonitor: () -> Unit) 
 @Composable
 private fun TodayStrip(sessionCount: Int) {
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
-                Text("All-time sessions", style = MaterialTheme.typography.bodySmall, color = PanelGray)
-                Text(
-                    "$sessionCount",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                RingMeter(
+                    fraction = (sessionCount / 100f), // 100-session reference ceiling
+                    value = "$sessionCount",
+                    unit = "SESSIONS",
+                    color = PhosphorGreen,
+                    size = 64.dp,
+                    strokeWidth = 6.dp
                 )
+                Column {
+                    Text("All-time sessions", style = MaterialTheme.typography.bodySmall, color = PanelGray)
+                    Text(
+                        "$sessionCount total",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             Text(
                 "View History →",
