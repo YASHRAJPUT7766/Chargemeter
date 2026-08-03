@@ -101,6 +101,32 @@ class PowerConnectionReceiver : BroadcastReceiver() {
                         )
                     }
                 }
+
+                // Charging Display: opt-in full-screen lock-screen readout,
+                // launched on plug-in only (never on disconnect). Gated
+                // strictly on the user's explicit toggle in Settings —
+                // launching an activity from a background receiver like
+                // this is exactly the kind of surprising behavior that
+                // should never happen without clear consent.
+                if (action == Intent.ACTION_POWER_CONNECTED &&
+                    settingsDataStore.chargingDisplayEnabled.first()
+                ) {
+                    try {
+                        context.startActivity(
+                            com.yash.chargemeterpro.ui.screens.chargingdisplay.ChargingDisplayActivity.launchIntent(context)
+                        )
+                    } catch (e: Exception) {
+                        // Background activity-start restrictions (API 29+)
+                        // can reject this in some states (e.g. app fully
+                        // killed with no exemption). Fail safe — same
+                        // battery-optimization exemption flow mentioned
+                        // above makes this reliable in practice.
+                        android.util.Log.w(
+                            "PowerConnectionReceiver",
+                            "Could not start ChargingDisplayActivity from background: ${e.message}"
+                        )
+                    }
+                }
             } finally {
                 pendingResult.finish()
             }

@@ -71,6 +71,14 @@ class ChargingMonitorService : Service() {
     private var milestone100Fired = false
     private var lastKnownStatus: ChargingStatus = ChargingStatus.UNKNOWN
 
+    // Custom-threshold "unplug now" reminder state. Unlike the fixed
+    // 80/90/100% milestones (which fire once per session), the custom
+    // threshold re-fires periodically for as long as the phone stays
+    // plugged in past it — since the app can't stop charging itself,
+    // a one-shot notification is too easy to miss/dismiss and forget.
+    private var customThresholdReminderLoopCount = 0
+    private val customThresholdReminderRepeatEveryLoops = 8 // ~2 min at the 15s poll interval
+
     // Guards against a transient plug-in start (mode 2 above) looping
     // forever if the device is unplugged again before a session ever
     // actually starts (e.g. a very brief/flaky connection). Without this,
@@ -155,6 +163,7 @@ class ChargingMonitorService : Service() {
                     milestone80Fired = false
                     milestone90Fired = false
                     milestone100Fired = false
+                    customThresholdReminderLoopCount = 0
                     if (settingsDataStore.alertChargingStarted.first()) {
                         notificationManager.notifyChargingStarted(snapshot.batteryPercent)
                     }
@@ -168,6 +177,8 @@ class ChargingMonitorService : Service() {
                 val wasFull = snapshot.isFull
                 sessionRepository.endSession(sid, snapshot, completedNormally = true)
                 activeSessionId = null
+                customThresholdReminderLoopCount = 0
+                notificationManager.cancelCustomThresholdReminder()
 
                 if (wasFull && settingsDataStore.alertChargingCompleted.first()) {
                     val closedSession = sessionRepository.getSessionById(sid)
@@ -212,6 +223,28 @@ class ChargingMonitorService : Service() {
             if (snapshot.batteryPercent >= 100 && !milestone100Fired && settingsDataStore.alert100Percent.first()) {
                 notificationManager.notifyMilestone(100)
                 milestone100Fired = true
+            }
+
+            // Custom "stop charging at X%" threshold. This is a real,
+            // previously-broken feature: the value was saved to
+            // SettingsDataStore but never actually read anywhere. It's
+            // wired up here now. IMPORTANT REALITY CHECK: no non-root
+            // Android app can physically stop charging — that control
+            // isn't exposed to third-party apps by the OS. So instead
+            // of pretending to stop charging, this fires a loud "unplug
+            // now" reminder the moment the threshold is crossed, and
+            // keeps re-firing every ~2 minutes for as long as the phone
+            // stays plugged in past it, so it's actually hard to miss.
+            if (settingsDataStore.customMilestoneEnabled.first()) {
+                val customThreshold = settingsDataStore.customMilestonePercent.first()
+                if (snapshot.batteryPercent >= customThreshold) {
+                    if (customThresholdReminderLoopCount <= 0) {
+                        notificationManager.notifyCustomThresholdReached(customThreshold)
+                        customThresholdReminderLoopCount = customThresholdReminderRepeatEveryLoops
+                    } else {
+                        customThresholdReminderLoopCount--
+                    }
+                }
             }
         }
 
