@@ -23,10 +23,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -43,9 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -195,8 +194,12 @@ private fun FeaturesStage(onGetStarted: () -> Unit) {
             .background(InstrumentBg)
             .padding(horizontal = 28.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.height(64.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
 
             BrandMark(size = 72.dp)
 
@@ -211,9 +214,9 @@ private fun FeaturesStage(onGetStarted: () -> Unit) {
                 modifier = Modifier.padding(top = 14.dp)
             )
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 features.forEachIndexed { index, feature ->
                     AnimatedVisibility(
                         visible = index < revealedCount,
@@ -224,8 +227,12 @@ private fun FeaturesStage(onGetStarted: () -> Unit) {
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(40.dp))
 
+            // Fixed-position button — a plain, clearly-visible green
+            // pill with black "Get Started" text, always laid out right
+            // after the feature list rather than pinned via a weighted
+            // spacer, so it can never end up pushed off-screen.
             AnimatedVisibility(
                 visible = showButton,
                 enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { it / 2 }
@@ -234,14 +241,15 @@ private fun FeaturesStage(onGetStarted: () -> Unit) {
                     onClick = onGetStarted,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
-                        .padding(bottom = 40.dp),
+                        .height(52.dp),
                     shape = RoundedCornerShape(26.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PhosphorGreen, contentColor = Color.Black)
                 ) {
                     Text("Get Started", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
@@ -290,46 +298,16 @@ private fun TypewriterFeatureRow(text: String, play: Boolean) {
 
 @Composable
 private fun BrandMark(size: Dp) {
-    Box(
+    // The app's real launcher icon (adaptive icon foreground/background),
+    // not a redrawn approximation — same asset used for the Play Store
+    // listing and home-screen icon.
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(id = com.yash.chargemeterpro.R.mipmap.ic_launcher),
+        contentDescription = null,
         modifier = Modifier
             .size(size)
             .clip(RoundedCornerShape(size * 0.28f))
-            .background(MaterialTheme.colorScheme.surface),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.size(size * 0.55f)) {
-            val barCount = 5
-            val barSpacing = this.size.width / barCount
-            val barColors = listOf(
-                Color(0xFFFF5E5E),
-                Color(0xFFFFA53E),
-                Color(0xFFFFD93E),
-                Color(0xFF6FE36F),
-                Color(0xFF3EA8FF)
-            )
-            for (i in 0 until barCount) {
-                val barHeightFraction = 0.35f + (i / (barCount - 1f)) * 0.65f
-                val barHeight = this.size.height * barHeightFraction
-                val x = i * barSpacing + barSpacing * 0.18f
-                val barW = barSpacing * 0.64f
-                drawRoundRect(
-                    color = barColors[i],
-                    topLeft = Offset(x, this.size.height - barHeight),
-                    size = Size(barW, barHeight),
-                    cornerRadius = CornerRadius(barW * 0.3f)
-                )
-            }
-        }
-        Icon(
-            imageVector = Icons.Filled.Bolt,
-            contentDescription = null,
-            tint = PhosphorGreen,
-            modifier = Modifier
-                .size(size * 0.26f)
-                .align(Alignment.BottomEnd)
-                .padding(size * 0.06f)
-        )
-    }
+    )
 }
 
 @Composable
