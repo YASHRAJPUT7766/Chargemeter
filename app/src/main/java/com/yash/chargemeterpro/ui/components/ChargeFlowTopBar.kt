@@ -1,12 +1,18 @@
 package com.yash.chargemeterpro.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -18,53 +24,70 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yash.chargemeterpro.R
-import com.yash.chargemeterpro.ui.theme.InstrumentSurface
-import com.yash.chargemeterpro.ui.theme.PhosphorGreen
 
 /**
  * The single, consistent top app bar shown on every top-level screen
- * (Home, Stats, History, Settings) — always the ChargeFlow mark plus the
- * app name, per the "every page must use the ChargeFlow logo/name in the
- * top area" requirement. Drill-in screens use ScreenBackTopBar instead
- * (see ChargeMeterNavHost.kt) since those need a back action, not a
- * fresh brand header.
+ * (Home, Stats, History, Settings): the ChargeFlow launcher mark sitting
+ * directly beside the "ChargeFlow" name — both left-aligned together as
+ * one lockup, not split across the bar — plus three quick-action icons
+ * on the right:
+ *
+ *  1. Theme toggle — one tap flips dark <-> light. (System-follow mode
+ *     is still available as a separate, explicit choice in Settings;
+ *     this quick toggle only ever lands on a concrete dark or light
+ *     state, matching "one click light, one click dark".)
+ *  2. Share — exports/shares the current charging snapshot (mirrors
+ *     Home's live status) as a PDF or SVG.
+ *  3. Battery Health — direct shortcut into the Battery Health screen,
+ *     since that screen no longer has its own bottom-nav slot.
+ *
+ * Drill-in screens (Live Monitor, Battery Health, Session Detail, etc.)
+ * use ScreenBackTopBar instead, since those need a back action rather
+ * than this brand+shortcuts header.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChargeFlowTopBar(subtitle: String? = null) {
+fun ChargeFlowTopBar(
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit,
+    onShare: () -> Unit,
+    onOpenBatteryHealth: () -> Unit
+) {
     TopAppBar(
         title = {
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .background(color = InstrumentSurface, shape = RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = null,
-                    tint = PhosphorGreen,
-                    modifier = Modifier.size(20.dp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = painterResource(id = R.mipmap.ic_launcher_round),
+                    contentDescription = "ChargeFlow logo",
+                    modifier = Modifier.size(40.dp)
                 )
+                Column(modifier = Modifier.padding(start = 10.dp)) {
+                    Text(
+                        text = "ChargeFlow",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         },
         actions = {
-            androidx.compose.foundation.layout.Column(
-                horizontalAlignment = Alignment.End,
-                modifier = Modifier.padding(end = 16.dp)
-            ) {
-                Text(
-                    text = "ChargeFlow",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+            IconButton(onClick = onToggleTheme) {
+                Icon(
+                    imageVector = if (isDarkTheme) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                    contentDescription = if (isDarkTheme) "Switch to light theme" else "Switch to dark theme"
                 )
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            }
+            IconButton(onClick = onShare) {
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = "Share charging summary"
+                )
+            }
+            IconButton(onClick = onOpenBatteryHealth) {
+                Icon(
+                    imageVector = Icons.Filled.FavoriteBorder,
+                    contentDescription = "Open Battery Health"
+                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
