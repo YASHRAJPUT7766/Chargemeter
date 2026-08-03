@@ -52,10 +52,20 @@
     <string name="widget_description">Live battery %, charging status, current, voltage, watts and temperature.</string>
 
     <!-- Notification channels -->
-    <string name="channel_charging_events_name">Charging Events</string>
-    <string name="channel_charging_events_desc">Charging started, completed, and percentage milestones</string>
-    <string name="channel_alerts_name">Battery Alerts</string>
-    <string name="channel_alerts_desc">Temperature, slow charging, disconnect, and critical battery alerts</string>
+    <string name="channel_charging_started_name">Charging Started</string>
+    <string name="channel_charging_started_desc">Plays when a charging session begins</string>
+    <string name="channel_charging_completed_name">Charging Completed</string>
+    <string name="channel_charging_completed_desc">Plays when the battery finishes charging to full</string>
+    <string name="channel_milestone_name">Charge Milestones</string>
+    <string name="channel_milestone_desc">Plays at 80%, 90%, 100%, and your custom charge threshold</string>
+    <string name="channel_high_temp_name">High Temperature</string>
+    <string name="channel_high_temp_desc">Plays when battery temperature crosses your threshold</string>
+    <string name="channel_slow_charge_name">Slow Charging</string>
+    <string name="channel_slow_charge_desc">Plays when charging speed drops below your threshold</string>
+    <string name="channel_disconnected_name">Disconnected Early</string>
+    <string name="channel_disconnected_desc">Plays when charging stops before reaching full</string>
+    <string name="channel_critical_low_name">Critical Low Battery</string>
+    <string name="channel_critical_low_desc">Plays when battery drops below your critical threshold</string>
     <string name="channel_monitor_service_name">Always-On Monitor</string>
     <string name="channel_monitor_service_desc">Persistent notification while Always-On Charging Monitor is active</string>
 
