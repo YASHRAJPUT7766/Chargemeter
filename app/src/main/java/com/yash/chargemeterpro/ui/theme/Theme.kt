@@ -55,6 +55,8 @@ private val LightInstrumentScheme = lightColorScheme(
     onBackground = Color(0xFF10151A),
     surface = White,
     onSurface = Color(0xFF10151A),
+    surfaceVariant = White,
+    onSurfaceVariant = Color(0xFF3C4650),
     outline = Color(0xFFD8DEE4),
     error = CriticalRed
 )
