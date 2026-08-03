@@ -54,6 +54,8 @@ import com.yash.chargemeterpro.ui.screens.history.CompareSessionsScreen
 import com.yash.chargemeterpro.ui.screens.history.HistoryScreen
 import com.yash.chargemeterpro.ui.screens.home.HomeScreen
 import com.yash.chargemeterpro.ui.screens.livemonitor.LiveMonitorScreen
+import com.yash.chargemeterpro.ui.screens.onboarding.OnboardingScreen
+import com.yash.chargemeterpro.ui.screens.onboarding.OnboardingSplashStage
 import com.yash.chargemeterpro.ui.screens.sessiondetail.SessionDetailScreen
 import com.yash.chargemeterpro.ui.screens.settings.SettingsScreen
 import com.yash.chargemeterpro.ui.screens.speedtest.SpeedTestScreen
@@ -65,8 +67,46 @@ import com.yash.chargemeterpro.ui.theme.PhosphorGreen
 @Composable
 fun ChargeMeterNavHost(
     isDarkTheme: Boolean,
-    onToggleTheme: () -> Unit
+    onToggleTheme: () -> Unit,
+    onboardingComplete: Boolean? = true,
+    onOnboardingFinished: () -> Unit = {}
 ) {
+    // Gate the entire app behind the onboarding flag before anything else
+    // renders.
+    //
+    //   - onboardingComplete == null: SettingsDataStore hasn't emitted its
+    //     first value yet (this frame only, right at cold start). Show
+    //     just the branded splash — not the full feature list — so a
+    //     returning user never sees onboarding flash before we know the
+    //     real flag.
+    //   - onboardingComplete == false (first ever launch): branded splash
+    //     -> feature list -> "Get Started" -> flips the flag to true ->
+    //     recomposes straight past this gate into the normal app below.
+    //   - onboardingComplete == true (every later cold start): branded
+    //     splash plays once more as a fixed-duration loading beat, then
+    //     goes straight to Home — the feature list never shows again.
+    if (onboardingComplete == null) {
+        OnboardingSplashStage(onFinished = {})
+        return
+    }
+
+    if (!onboardingComplete) {
+        var hasFinishedOnboardingFlow by remember { mutableStateOf(false) }
+        if (!hasFinishedOnboardingFlow) {
+            OnboardingScreen(onGetStarted = {
+                hasFinishedOnboardingFlow = true
+                onOnboardingFinished()
+            })
+            return
+        }
+    }
+
+    var showReturningSplash by remember { mutableStateOf(onboardingComplete) }
+    if (showReturningSplash) {
+        OnboardingSplashStage(onFinished = { showReturningSplash = false })
+        return
+    }
+
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
