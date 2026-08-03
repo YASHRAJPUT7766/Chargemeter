@@ -24,10 +24,8 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ElectricalServices
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -45,8 +43,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yash.chargemeterpro.domain.model.BatterySnapshot
@@ -232,6 +230,13 @@ private fun BatteryGlowIllustration(percent: Int, isCharging: Boolean) {
             }
         }
 
+        // Outline/cap/bolt color must track the theme: pure white is
+        // invisible against the near-white light-mode card surface.
+        // onSurface resolves to white in dark mode (matching the original
+        // look exactly) and to a dark ink color in light mode, so the
+        // battery jar stays visible either way.
+        val outlineColor = MaterialTheme.colorScheme.onSurface
+
         Canvas(modifier = Modifier.size(50.dp, 78.dp)) {
             val w = size.width
             val h = size.height
@@ -240,14 +245,14 @@ private fun BatteryGlowIllustration(percent: Int, isCharging: Boolean) {
             val bodyTop = capHeight + 3.dp.toPx()
 
             drawRoundRect(
-                color = Color.White.copy(alpha = 0.85f),
+                color = outlineColor.copy(alpha = 0.85f),
                 topLeft = Offset((w - capWidth) / 2f, 0f),
                 size = Size(capWidth, capHeight),
                 cornerRadius = CornerRadius(2.dp.toPx())
             )
 
             drawRoundRect(
-                color = Color.White.copy(alpha = 0.9f),
+                color = outlineColor.copy(alpha = 0.9f),
                 topLeft = Offset(0f, bodyTop),
                 size = Size(w, h - bodyTop),
                 cornerRadius = CornerRadius(12.dp.toPx()),
@@ -271,7 +276,7 @@ private fun BatteryGlowIllustration(percent: Int, isCharging: Boolean) {
         Icon(
             imageVector = Icons.Filled.Bolt,
             contentDescription = null,
-            tint = Color.White,
+            tint = outlineColor,
             modifier = Modifier.size(22.dp)
         )
     }
@@ -281,70 +286,114 @@ private fun BatteryGlowIllustration(percent: Int, isCharging: Boolean) {
 // Watt / Current / Voltage / Temperature grid
 // ---------------------------------------------------------------------
 
+/**
+ * Replaces the old flat 4-cell grid with an instrument-cluster layout:
+ * one large ring "speedometer" for Watt (the hero reading) with the
+ * numeric watt value rendered bigger above it, and three smaller rings
+ * underneath for Voltage / Current / Temperature — each visibly smaller
+ * than the Watt ring so the hierarchy reads at a glance.
+ */
 @Composable
 private fun StatsGridCard(snapshot: BatterySnapshot?) {
     val powerWatts = snapshot?.let { PowerCalculator.batteryInputPowerWatts(it) }
+    val wattFraction = powerWatts?.let { (it / WATT_RING_MAX_SCALE).toFloat().coerceIn(0f, 1f) } ?: 0f
+    val voltage = snapshot?.voltageVolts
+    val currentMa = snapshot?.currentMilliAmpsNormalized
+    val tempC = snapshot?.temperatureC
 
-    InstrumentCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 18.dp, horizontal = 8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            StatCell(
-                icon = Icons.Filled.Bolt,
-                label = "WATT",
+    InstrumentCard(modifier = Modifier.fillMaxWidth()) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = HomeFormatters.wattsText(powerWatts),
+                    style = MaterialTheme.typography.displayLarge.copy(fontSize = 40.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = PhosphorGreen
+                )
+                Text(
+                    text = "W",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = PanelGray,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+                )
+            }
+            Text("CHARGING POWER", style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Big ring speedometer — the hero instrument for this card
+            RingMeter(
+                fraction = wattFraction,
                 value = HomeFormatters.wattsText(powerWatts),
-                unit = "W",
-                color = PhosphorGreen
+                unit = "WATTS",
+                color = PhosphorGreen,
+                size = 168.dp,
+                strokeWidth = 14.dp
             )
-            StatCell(
-                icon = Icons.Filled.ShowChart,
-                label = "CURRENT",
-                value = HomeFormatters.mAText(snapshot?.currentMilliAmpsNormalized),
-                unit = "mA",
-                color = VoltageBlue
-            )
-            StatCell(
-                icon = Icons.Filled.Shield,
-                label = "VOLTAGE",
-                value = HomeFormatters.voltsText(snapshot?.voltageVolts),
-                unit = "V",
-                color = VoltageBlue
-            )
-            StatCell(
-                icon = Icons.Filled.Thermostat,
-                label = "TEMPERATURE",
-                value = HomeFormatters.tempText(snapshot?.temperatureC),
-                unit = "°C",
-                color = WarningAmber
-            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            // Three smaller rings, visibly smaller than the Watt ring above
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                MiniStatRing(
+                    label = "VOLTAGE",
+                    ring = RingMeterData(
+                        fraction = (voltage?.toFloat() ?: 0f) / VOLTAGE_RING_MAX_SCALE,
+                        value = HomeFormatters.voltsText(voltage),
+                        unit = "V"
+                    ),
+                    color = VoltageBlue
+                )
+                MiniStatRing(
+                    label = "CURRENT",
+                    ring = RingMeterData(
+                        fraction = (currentMa?.toFloat() ?: 0f) / CURRENT_RING_MAX_SCALE,
+                        value = HomeFormatters.mAText(currentMa),
+                        unit = "mA"
+                    ),
+                    color = VoltageBlue
+                )
+                MiniStatRing(
+                    label = "TEMP",
+                    ring = RingMeterData(
+                        fraction = (tempC?.toFloat() ?: 0f) / TEMPERATURE_RING_MAX_SCALE,
+                        value = HomeFormatters.tempText(tempC),
+                        unit = "°C"
+                    ),
+                    color = WarningAmber
+                )
+            }
         }
     }
 }
+
+/** Plain data holder so MiniStatRing doesn't need five separate parameters. */
+private data class RingMeterData(val fraction: Float, val value: String, val unit: String)
 
 @Composable
-private fun StatCell(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, unit: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(78.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = color,
-                textAlign = TextAlign.Center
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(
-                text = unit,
-                style = MaterialTheme.typography.labelSmall,
-                color = PanelGray,
-                modifier = Modifier.padding(start = 2.dp, bottom = 3.dp)
-            )
-        }
-        Text(text = label.lowercase().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
+private fun MiniStatRing(label: String, ring: RingMeterData, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        RingMeter(
+            fraction = ring.fraction.coerceIn(0f, 1f),
+            value = ring.value,
+            unit = ring.unit,
+            color = color,
+            size = 84.dp,
+            strokeWidth = 7.dp
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
     }
 }
+
+// Scale ceilings for each ring's fraction — tuned to typical phone
+// charging ranges so the arc sits in a legible mid-to-high position
+// during normal charging rather than looking perpetually empty or maxed.
+private const val WATT_RING_MAX_SCALE = 30.0
+private const val VOLTAGE_RING_MAX_SCALE = 12f
+private const val CURRENT_RING_MAX_SCALE = 3000f
+private const val TEMPERATURE_RING_MAX_SCALE = 50f
 
 // ---------------------------------------------------------------------
 // Charging Speed / Time Remaining
