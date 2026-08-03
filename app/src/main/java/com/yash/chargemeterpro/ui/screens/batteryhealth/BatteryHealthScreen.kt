@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,9 +26,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yash.chargemeterpro.domain.model.AvailableOr
 import com.yash.chargemeterpro.domain.usecase.BatteryHealthScorer
 import com.yash.chargemeterpro.domain.usecase.PowerTerminology
+import com.yash.chargemeterpro.ui.components.CapsuleMeterRow
 import com.yash.chargemeterpro.ui.components.DisclaimerText
 import com.yash.chargemeterpro.ui.components.InstrumentCard
-import com.yash.chargemeterpro.ui.components.ReadingRow
 import com.yash.chargemeterpro.ui.components.RingMeter
 import com.yash.chargemeterpro.ui.components.StatusBadgeRow
 import com.yash.chargemeterpro.ui.theme.CriticalRed
@@ -60,6 +61,7 @@ fun BatteryHealthScreen(viewModel: BatteryHealthViewModel = hiltViewModel()) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun HealthScoreCard(result: BatteryHealthScorer.HealthScoreResult?) {
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
@@ -93,8 +95,25 @@ private fun HealthScoreCard(result: BatteryHealthScorer.HealthScoreResult?) {
                         style = MaterialTheme.typography.bodySmall,
                         color = PanelGray
                     )
-                    result.basedOn.forEach { line ->
-                        Text("• $line", style = MaterialTheme.typography.bodySmall, color = PanelGray)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        result.basedOn.forEach { line ->
+                            androidx.compose.material3.Surface(
+                                color = scoreColor(result.value).copy(alpha = 0.14f),
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Text(
+                                    line,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = scoreColor(result.value),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -161,18 +180,41 @@ private fun DiagnosticsCard(state: BatteryHealthUiState) {
                 accentColor = PanelGray
             )
 
-            ReadingRow(label = "Voltage", value = snapshot?.voltageVolts?.let { "%.3f".format(it) }, unit = "V")
-            ReadingRow(
-                label = "Current",
-                value = snapshot?.currentMilliAmpsNormalized?.let { "%.1f".format(it) },
-                unit = "mA"
-            )
-            ReadingRow(
+            androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                RingMeter(
+                    fraction = ((snapshot?.voltageVolts ?: 0.0) / 5.0).toFloat(),
+                    value = snapshot?.voltageVolts?.let { "%.2f".format(it) } ?: "—",
+                    unit = "VOLTS",
+                    color = VoltageBlue,
+                    size = 76.dp,
+                    strokeWidth = 7.dp
+                )
+                RingMeter(
+                    fraction = ((snapshot?.currentMilliAmpsNormalized ?: 0.0) / 3000.0).toFloat(),
+                    value = snapshot?.currentMilliAmpsNormalized?.let { "%.0f".format(it) } ?: "—",
+                    unit = "mA",
+                    color = WarningAmber,
+                    size = 76.dp,
+                    strokeWidth = 7.dp
+                )
+                RingMeter(
+                    fraction = ((snapshot?.cycleCount?.orNull()?.toFloat() ?: 0f) / 1000f),
+                    value = snapshot?.cycleCount?.orNull()?.toString() ?: "—",
+                    unit = "CYCLES",
+                    color = PanelGray,
+                    size = 76.dp,
+                    strokeWidth = 7.dp
+                )
+            }
+
+            CapsuleMeterRow(
                 label = "Charge Counter",
-                value = (snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value?.let { "%.0f".format(it / 1000.0) },
-                unit = "mAh"
+                valueText = (snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value?.let { "%.0f mAh".format(it / 1000.0) } ?: "—",
+                fraction = (((snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value ?: 0.0) / 5_000_000.0).toFloat(),
+                color = PhosphorGreen
             )
-            ReadingRow(label = "Cycle Count", value = snapshot?.cycleCount?.orNull()?.toString())
         }
     }
 }
