@@ -82,6 +82,59 @@ object PdfExportBuilder {
         return file
     }
 
+    /**
+     * A report of the current live battery/charging status — this is what
+     * the top bar's Share action builds, distinct from
+     * [buildSingleSessionReport] which reports on a *completed, saved*
+     * session. Live snapshot data doesn't have a session id or a fixed
+     * duration yet, so this uses BatterySnapshot's raw fields directly
+     * rather than a ChargingSessionEntity.
+     */
+    fun buildLiveStatusReport(context: Context, snapshot: com.yash.chargemeterpro.domain.model.BatterySnapshot): File {
+        val file = outputFile(context, "chargeflow_status_${fileTimestampFmt.format(Date())}.pdf")
+        PdfDocument(PdfWriter(file.absolutePath)).use { pdf ->
+            Document(pdf).use { doc ->
+                writeReportHeader(doc, "Charging Status Report")
+
+                doc.add(Paragraph(dateFmt.format(Date(snapshot.timestampMillis))).setFontColor(panelGray).setFontSize(10f))
+                doc.add(Paragraph(" "))
+
+                val table = Table(UnitValue.createPercentArray(floatArrayOf(1f, 1f))).useAllAvailableWidth()
+                addRow(table, "Battery Level", "${snapshot.batteryPercent}%")
+                addRow(table, "Charging Status", snapshot.chargingStatus.name)
+                addRow(table, "Plug Type", snapshot.plugType.name)
+                addRow(
+                    table,
+                    "Voltage",
+                    (snapshot.voltageMilliVolts as? com.yash.chargemeterpro.domain.model.AvailableOr.Value)
+                        ?.value?.let { "%.3f V".format(it / 1000.0) } ?: PowerTerminology.NOT_AVAILABLE
+                )
+                addRow(
+                    table,
+                    "Current",
+                    snapshot.currentMilliAmpsNormalized?.let { "%.1f mA".format(it) } ?: PowerTerminology.NOT_AVAILABLE
+                )
+                addRow(
+                    table,
+                    "Estimated Power",
+                    snapshot.batteryInputPowerWatts?.let { "%.2f W".format(it) } ?: PowerTerminology.NOT_AVAILABLE
+                )
+                addRow(
+                    table,
+                    "Temperature",
+                    (snapshot.temperatureCelsius as? com.yash.chargemeterpro.domain.model.AvailableOr.Value)
+                        ?.value?.let { "%.1f °C".format(it) } ?: PowerTerminology.NOT_AVAILABLE
+                )
+                addRow(table, "Health", snapshot.health.name)
+                addRow(table, "Technology", snapshot.technology.orNull() ?: PowerTerminology.NOT_AVAILABLE)
+                doc.add(table)
+
+                writeDisclaimerFooter(doc)
+            }
+        }
+        return file
+    }
+
     fun buildHistoryReport(context: Context, sessions: List<ChargingSessionEntity>): File {
         val file = outputFile(context, "chargemeter_history_${fileTimestampFmt.format(Date())}.pdf")
         PdfDocument(PdfWriter(file.absolutePath)).use { pdf ->
@@ -113,7 +166,7 @@ object PdfExportBuilder {
     }
 
     private fun writeReportHeader(doc: Document, title: String) {
-        doc.add(Paragraph("ChargeMeter Pro").setFontColor(phosphorGreen).setBold().setFontSize(11f))
+        doc.add(Paragraph("ChargeFlow").setFontColor(phosphorGreen).setBold().setFontSize(11f))
         doc.add(Paragraph(title).setBold().setFontSize(20f))
     }
 
