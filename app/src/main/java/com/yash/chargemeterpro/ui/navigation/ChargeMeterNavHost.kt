@@ -1,6 +1,7 @@
 package com.yash.chargemeterpro.ui.navigation
 
 import android.content.Intent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,7 +60,6 @@ import com.yash.chargemeterpro.ui.screens.sessiondetail.SessionDetailScreen
 import com.yash.chargemeterpro.ui.screens.settings.SettingsScreen
 import com.yash.chargemeterpro.ui.screens.speedtest.SpeedTestScreen
 import com.yash.chargemeterpro.ui.screens.statistics.StatisticsScreen
-import com.yash.chargemeterpro.ui.theme.InstrumentSurfaceRaised
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
 
@@ -264,6 +264,13 @@ fun ChargeMeterNavHost(
  * full-width bar with a 1px divider line and no outer rounding —
  * visually flat/edge-to-edge rather than the floating-capsule look in the
  * design reference.
+ *
+ * Uses MaterialTheme.colorScheme.surfaceVariant rather than a hardcoded
+ * dark-only color, so the capsule itself switches from the dark
+ * "elevated card" tone to the light scheme's white/near-white surface
+ * automatically when the user toggles Light mode — previously this was
+ * hardcoded to InstrumentSurfaceRaised (a fixed dark color from
+ * DarkInstrumentScheme), so the bar stayed black even in Light mode.
  */
 @Composable
 private fun ChargeMeterBottomBar(navController: NavHostController, currentRoute: String?) {
@@ -273,7 +280,7 @@ private fun ChargeMeterBottomBar(navController: NavHostController, currentRoute:
             .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .clip(RoundedCornerShape(28.dp))
-            .background(InstrumentSurfaceRaised)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 6.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
@@ -334,11 +341,33 @@ private fun BottomNavPillItem(
     }
 }
 
-/** Reusable top bar with a back button for drill-in / secondary screens. */
+/**
+ * Reusable top bar with a back button for drill-in / secondary screens
+ * (Live Monitor, Battery Health, About, Privacy Policy, Speed Test,
+ * Compare Sessions, Session Detail).
+ *
+ * Also shows the ChargeFlow logo next to the title, matching
+ * ChargeFlowTopBar on the top-level screens (Home/Stats/History/
+ * Settings) — previously this bar only had the back arrow and title, so
+ * the brand mark disappeared the moment the user navigated one level
+ * deep into the app, which read as inconsistent/unbranded on every
+ * screen except those four.
+ */
 @Composable
 fun ScreenBackTopBar(title: String, onBack: () -> Unit) {
     androidx.compose.material3.TopAppBar(
-        title = { Text(title) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = androidx.compose.ui.res.painterResource(
+                        id = com.yash.chargemeterpro.R.drawable.ic_launcher_foreground
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp)
+                )
+                Text(title, modifier = Modifier.padding(start = 10.dp))
+            }
+        },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
