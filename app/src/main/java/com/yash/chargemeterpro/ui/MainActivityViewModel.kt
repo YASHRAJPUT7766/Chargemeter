@@ -13,6 +13,11 @@ class MainActivityViewModel @Inject constructor(
 ) : ViewModel() {
     val themeMode = settingsDataStore.themeMode
     val useDynamicColor = settingsDataStore.useDynamicColor
+    val onboardingComplete = settingsDataStore.onboardingComplete
+
+    fun markOnboardingComplete() {
+        viewModelScope.launch { settingsDataStore.setOnboardingComplete(true) }
+    }
 
     /**
      * The top bar's quick theme toggle (see ChargeFlowTopBar) always
