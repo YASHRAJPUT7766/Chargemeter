@@ -1,21 +1,34 @@
 package com.yash.chargemeterpro.ui.screens.about
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yash.chargemeterpro.BuildConfig
 import com.yash.chargemeterpro.ui.components.InstrumentCard
 import com.yash.chargemeterpro.ui.navigation.ScreenBackTopBar
 import com.yash.chargemeterpro.ui.theme.PanelGray
+import com.yash.chargemeterpro.ui.theme.PhosphorGreen
+import com.yash.chargemeterpro.ui.theme.PhosphorGreenDim
 
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
@@ -29,12 +42,25 @@ fun AboutScreen(onBack: () -> Unit) {
             item {
                 InstrumentCard(modifier = Modifier.fillMaxWidth()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("ChargeMeter Pro", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text(
-                            "Version ${BuildConfig.VERSION_NAME}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PanelGray
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.linearGradient(listOf(PhosphorGreenDim, PhosphorGreen))),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Filled.BatteryChargingFull, contentDescription = null, tint = androidx.compose.ui.graphics.Color.Black)
+                            }
+                            Column {
+                                Text("ChargeMeter Pro", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Version ${BuildConfig.VERSION_NAME}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = PanelGray
+                                )
+                            }
+                        }
                         Text(
                             "ChargeMeter Pro reads the charging and battery information your Android device already makes available through the platform's official BatteryManager APIs, and presents it as clearly and accurately as possible.",
                             style = MaterialTheme.typography.bodyMedium
