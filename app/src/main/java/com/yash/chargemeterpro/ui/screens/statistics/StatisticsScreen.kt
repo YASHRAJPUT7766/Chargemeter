@@ -30,6 +30,7 @@ import com.yash.chargemeterpro.ui.components.CapsuleMeterRow
 import com.yash.chargemeterpro.ui.components.DisclaimerText
 import com.yash.chargemeterpro.ui.components.InstrumentCard
 import com.yash.chargemeterpro.ui.components.RingMeter
+import com.yash.chargemeterpro.ui.components.SparklineGraph
 import com.yash.chargemeterpro.ui.theme.GraphTemperature
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
@@ -163,19 +164,12 @@ private fun AllTimeCard(state: StatisticsUiState) {
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Average Session Duration", style = MaterialTheme.typography.bodyMedium, color = PanelGray)
-                Text(
-                    text = state.averageSessionDurationMinutes?.let { formatMinutesCompact(it) } ?: "—",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PhosphorGreen
-                )
-            }
+            CapsuleMeterRow(
+                label = "Average Session Duration",
+                valueText = state.averageSessionDurationMinutes?.let { formatMinutesCompact(it) } ?: "—",
+                fraction = ((state.averageSessionDurationMinutes ?: 0L) / 180f), // 3h reference ceiling
+                color = PhosphorGreen
+            )
         }
     }
 }
@@ -183,28 +177,41 @@ private fun AllTimeCard(state: StatisticsUiState) {
 @Composable
 private fun DrainRateCard(state: StatisticsUiState) {
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            RingMeter(
-                // 3%/hour is a rough "high drain" reference — a healthy idle
-                // drain is usually well under 1.5%/hour, so this scale keeps
-                // normal readings from looking maxed-out.
-                fraction = ((state.drainRate.percentPerHour ?: 0.0) / 3.0).toFloat(),
-                value = state.drainRate.percentPerHour?.let { "%.1f".format(it) } ?: "—",
-                unit = "%/HOUR",
-                color = GraphTemperature,
-                size = 76.dp,
-                strokeWidth = 7.dp
-            )
-            Column {
-                Text(
-                    "Battery Drain (7 days)",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                RingMeter(
+                    // 3%/hour is a rough "high drain" reference — a healthy idle
+                    // drain is usually well under 1.5%/hour, so this scale keeps
+                    // normal readings from looking maxed-out.
+                    fraction = ((state.drainRate.percentPerHour ?: 0.0) / 3.0).toFloat(),
+                    value = state.drainRate.percentPerHour?.let { "%.1f".format(it) } ?: "—",
+                    unit = "%/HOUR",
+                    color = GraphTemperature,
+                    size = 76.dp,
+                    strokeWidth = 7.dp
                 )
-                Text(
-                    "Based on ${state.drainRate.sampleCount} background samples collected while not charging, taken roughly every 15 minutes.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PanelGray
+                Column {
+                    Text(
+                        "Battery Drain (7 days)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        "Based on ${state.drainRate.sampleCount} background samples collected while not charging, taken roughly every 15 minutes.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PanelGray
+                    )
+                }
+            }
+
+            if (state.batteryPercentHistory.size >= 2) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                SparklineGraph(
+                    values = state.batteryPercentHistory,
+                    color = GraphTemperature,
+                    label = "Battery % (last 7 days)",
+                    valueSuffix = "%",
+                    height = 100.dp
                 )
             }
         }

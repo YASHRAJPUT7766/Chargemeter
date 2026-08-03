@@ -24,7 +24,8 @@ data class StatisticsUiState(
     val allTimeTotalEnergyWh: Double? = null,
     val allTimeSessionCount: Int = 0,
     val averageSessionDurationMinutes: Long? = null,
-    val drainRate: DrainRateResult = DrainRateResult(null, 0, 0.0)
+    val drainRate: DrainRateResult = DrainRateResult(null, 0, 0.0),
+    val batteryPercentHistory: List<Float> = emptyList()
 )
 
 @HiltViewModel
@@ -84,7 +85,10 @@ class StatisticsViewModel @Inject constructor(
             val sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000)
             val samples = drainSampleDao.getSince(sevenDaysAgo)
             val rate = DrainRateCalculator.calculate(samples)
-            _uiState.value = _uiState.value.copy(drainRate = rate)
+            _uiState.value = _uiState.value.copy(
+                drainRate = rate,
+                batteryPercentHistory = samples.map { it.batteryPercent.toFloat() }
+            )
         }
     }
 
