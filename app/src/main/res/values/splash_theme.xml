@@ -12,9 +12,16 @@
         over automatically once the first Compose frame is drawn.
     -->
     <style name="Theme.ChargeFlow.Splash" parent="Theme.SplashScreen">
+        <!--
+            Intentionally no windowSplashScreenAnimatedIcon here. We only
+            want a single splash experience — the branded "Loading..."
+            screen rendered in Compose (OnboardingSplashStage). This
+            system-level window is kept only because installSplashScreen()
+            requires a SplashScreen-family theme; it now shows nothing but
+            a plain matching background for the instant before Compose
+            takes over, so the user never sees a second/different splash.
+        -->
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="windowSplashScreenIconBackgroundColor">@color/splash_background</item>
         <item name="postSplashScreenTheme">@style/Theme.ChargeMeterPro</item>
     </style>
 </resources>
