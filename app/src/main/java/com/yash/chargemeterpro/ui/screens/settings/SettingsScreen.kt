@@ -1,16 +1,26 @@
 package com.yash.chargemeterpro.ui.screens.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -21,13 +31,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yash.chargemeterpro.ui.components.InstrumentCard
 import com.yash.chargemeterpro.ui.components.SettingsSwitchRow
+import com.yash.chargemeterpro.ui.theme.GraphTemperature
 import com.yash.chargemeterpro.ui.theme.PanelGray
+import com.yash.chargemeterpro.ui.theme.PhosphorGreen
+import com.yash.chargemeterpro.ui.theme.VoltageBlue
+import com.yash.chargemeterpro.ui.theme.WarningAmber
 
 @Composable
 fun SettingsScreen(
@@ -64,13 +80,27 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SectionHeader(title: String) {
-    Text(
-        title.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
-        color = PanelGray,
-        modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
-    )
+private fun SectionHeader(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(bottom = 8.dp, start = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(15.dp))
+        }
+        Text(
+            title.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            color = PanelGray
+        )
+    }
 }
 
 @Composable
@@ -79,7 +109,7 @@ private fun AppearanceSection(vm: SettingsViewModel) {
     val dynamicColor by vm.useDynamicColor.collectAsStateWithLifecycle()
 
     Column {
-        SectionHeader("Appearance")
+        SectionHeader("Appearance", Icons.Filled.Palette, VoltageBlue)
         InstrumentCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Theme", style = MaterialTheme.typography.bodyLarge)
@@ -117,7 +147,7 @@ private fun AlertsSection(vm: SettingsViewModel) {
     val criticalLow by vm.alertCriticalLow.collectAsStateWithLifecycle()
 
     Column {
-        SectionHeader("Smart Charging Alerts")
+        SectionHeader("Smart Charging Alerts", Icons.Filled.NotificationsActive, WarningAmber)
         InstrumentCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 SettingsSwitchRow("Charging started", checked = chargingStarted, onCheckedChange = vm::setAlertChargingStarted)
@@ -141,7 +171,7 @@ private fun ThresholdsSection(vm: SettingsViewModel) {
     val slowChargeThreshold by vm.slowChargeThreshold.collectAsStateWithLifecycle()
 
     Column {
-        SectionHeader("Custom Thresholds")
+        SectionHeader("Custom Thresholds", Icons.Filled.Tune, GraphTemperature)
         InstrumentCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 ThresholdSlider(
@@ -196,7 +226,7 @@ private fun MonitoringSection(vm: SettingsViewModel) {
     val isIgnoringBatteryOptimizations by vm.isIgnoringBatteryOptimizations.collectAsStateWithLifecycle()
 
     Column {
-        SectionHeader("Monitoring")
+        SectionHeader("Monitoring", Icons.Filled.Timer, PhosphorGreen)
         InstrumentCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 SettingsSwitchRow(
@@ -252,7 +282,7 @@ private fun PrivacySection(vm: SettingsViewModel) {
     val analytics by vm.analyticsConsent.collectAsStateWithLifecycle()
 
     Column {
-        SectionHeader("Privacy")
+        SectionHeader("Privacy", Icons.Filled.Shield, VoltageBlue)
         InstrumentCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 Text(
@@ -281,7 +311,7 @@ private fun PrivacySection(vm: SettingsViewModel) {
 @Composable
 private fun AboutSection(onNavigateToAbout: () -> Unit, onNavigateToPrivacyPolicy: () -> Unit) {
     Column {
-        SectionHeader("About")
+        SectionHeader("About", Icons.Filled.Info, PanelGray)
         InstrumentCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 NavRow(title = "About ChargeMeter Pro", onClick = onNavigateToAbout)
