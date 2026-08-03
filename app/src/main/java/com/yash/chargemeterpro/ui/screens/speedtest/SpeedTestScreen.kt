@@ -31,11 +31,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yash.chargemeterpro.domain.usecase.PowerTerminology
 import com.yash.chargemeterpro.ui.components.DisclaimerText
 import com.yash.chargemeterpro.ui.components.InstrumentCard
-import com.yash.chargemeterpro.ui.components.ReadingRow
+import com.yash.chargemeterpro.ui.components.RingMeter
+import com.yash.chargemeterpro.ui.components.StatusBadgeRow
 import com.yash.chargemeterpro.ui.components.WattMeterGauge
 import com.yash.chargemeterpro.ui.navigation.ScreenBackTopBar
+import com.yash.chargemeterpro.ui.theme.GraphBatteryPct
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
+import com.yash.chargemeterpro.ui.theme.VoltageBlue
+import com.yash.chargemeterpro.ui.theme.WarningAmber
 
 @Composable
 fun SpeedTestScreen(onBack: () -> Unit, viewModel: SpeedTestViewModel = hiltViewModel()) {
@@ -144,15 +148,24 @@ private fun RunningContent(state: SpeedTestUiState, viewModel: SpeedTestViewMode
                     modifier = Modifier.fillMaxWidth(0.6f)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                ReadingRow(
-                    label = "Battery Percentage",
-                    value = state.liveSamples.lastOrNull()?.batteryPercent?.toString(),
-                    unit = "%"
-                )
-                ReadingRow(
-                    label = "Samples Recorded",
-                    value = state.liveSamples.size.toString()
-                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    RingMeter(
+                        fraction = ((state.liveSamples.lastOrNull()?.batteryPercent ?: 0) / 100f),
+                        value = state.liveSamples.lastOrNull()?.batteryPercent?.toString() ?: "—",
+                        unit = "BATTERY %",
+                        color = GraphBatteryPct,
+                        size = 76.dp,
+                        strokeWidth = 7.dp
+                    )
+                    RingMeter(
+                        fraction = (state.liveSamples.size / 200f),
+                        value = state.liveSamples.size.toString(),
+                        unit = "SAMPLES",
+                        color = VoltageBlue,
+                        size = 76.dp,
+                        strokeWidth = 7.dp
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -169,22 +182,40 @@ private fun ReportContent(state: SpeedTestUiState, viewModel: SpeedTestViewModel
         InstrumentCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 Text("Test Report", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    RingMeter(
+                        fraction = (report.averagePowerWatts ?: 0.0).toFloat() / 30f,
+                        value = report.averagePowerWatts?.let { "%.1f".format(it) } ?: "—",
+                        unit = "AVG W",
+                        color = PhosphorGreen
+                    )
+                    RingMeter(
+                        fraction = (report.maxPowerWatts ?: 0.0).toFloat() / 30f,
+                        value = report.maxPowerWatts?.let { "%.1f".format(it) } ?: "—",
+                        unit = "PEAK W",
+                        color = WarningAmber
+                    )
+                    RingMeter(
+                        fraction = report.percentGained / 100f,
+                        value = "+${report.percentGained}",
+                        unit = "GAINED %",
+                        color = GraphBatteryPct
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(12.dp))
-                ReadingRow(label = "Duration", value = formatSeconds(report.durationSeconds))
-                ReadingRow(label = "Battery Gained", value = "+${report.percentGained}", unit = "%")
-                ReadingRow(label = "Started at", value = "${report.startBatteryPercent}", unit = "%")
-                ReadingRow(label = "Ended at", value = "${report.endBatteryPercent}", unit = "%")
-                ReadingRow(
-                    label = "Average Power",
-                    value = report.averagePowerWatts?.let { "%.2f".format(it) },
-                    unit = "W"
-                )
-                ReadingRow(
-                    label = "Maximum Power",
-                    value = report.maxPowerWatts?.let { "%.2f".format(it) },
-                    unit = "W"
-                )
-                ReadingRow(label = "Samples Collected", value = report.samples.size.toString())
+
+                StatusBadgeRow(label = "Duration", value = formatSeconds(report.durationSeconds), accentColor = VoltageBlue)
+                Spacer(modifier = Modifier.height(10.dp))
+                StatusBadgeRow(label = "Started At", value = "${report.startBatteryPercent}%", accentColor = PanelGray)
+                Spacer(modifier = Modifier.height(10.dp))
+                StatusBadgeRow(label = "Ended At", value = "${report.endBatteryPercent}%", accentColor = PhosphorGreen)
+                Spacer(modifier = Modifier.height(10.dp))
+                StatusBadgeRow(label = "Samples Collected", value = report.samples.size.toString(), accentColor = VoltageBlue)
             }
         }
 
