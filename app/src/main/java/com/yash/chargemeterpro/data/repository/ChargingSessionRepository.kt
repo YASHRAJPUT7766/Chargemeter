@@ -107,6 +107,36 @@ class ChargingSessionRepository @Inject constructor(
         sessionDao.update(updated)
     }
 
+    /**
+     * Safety net run once per app process start (see
+     * ChargeMeterApplication.onCreate). Handles the last remaining gap:
+     * ChargingMonitorService itself got killed by the OS (memory
+     * pressure, aggressive OEM battery management, etc.) mid-session,
+     * with no BOOT_COMPLETED and no ACTION_POWER_DISCONNECTED ever
+     * delivered to bring it back, leaving a session permanently open in
+     * the DB with no end time/percent/voltage even though the phone may
+     * have long since finished charging (or even been unplugged and
+     * replugged since).
+     *
+     * currentSnapshot should be a *freshly read, real* snapshot (not a
+     * cached one) so the closed-out end values are accurate for "what the
+     * battery is doing right now" rather than stale data:
+     *  - If the device is still actually charging when we notice the
+     *    orphan, we do nothing — ChargingMonitorService/PowerConnection-
+     *    Receiver will resume ownership and close it out normally when
+     *    charging actually stops, with genuinely accurate exit data.
+     *  - If the device is NOT charging, the session is genuinely stale —
+     *    we close it with the current real reading and flag it as not
+     *    completed normally, so History can still distinguish "ended
+     *    because it hit 100%/unplugged" sessions from "we recovered from
+     *    an interrupted background process" sessions if ever needed.
+     */
+    suspend fun reconcileOrphanedActiveSession(currentSnapshot: BatterySnapshot) {
+        val active = sessionDao.getActiveSession() ?: return
+        if (currentSnapshot.isCharging) return
+        endSession(active.id, currentSnapshot, completedNormally = false)
+    }
+
     suspend fun deleteSession(sessionId: Long) = sessionDao.deleteById(sessionId)
 
     suspend fun deleteAllHistory() = sessionDao.deleteAll()
