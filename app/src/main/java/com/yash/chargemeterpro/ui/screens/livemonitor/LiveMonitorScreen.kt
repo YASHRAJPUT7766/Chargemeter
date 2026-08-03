@@ -32,8 +32,8 @@ import com.yash.chargemeterpro.domain.model.AvailableOr
 import com.yash.chargemeterpro.domain.usecase.PowerTerminology
 import com.yash.chargemeterpro.ui.components.DisclaimerText
 import com.yash.chargemeterpro.ui.components.InstrumentCard
-import com.yash.chargemeterpro.ui.components.ReadingRow
 import com.yash.chargemeterpro.ui.components.RingMeter
+import com.yash.chargemeterpro.ui.components.SparklineGraph
 import com.yash.chargemeterpro.ui.components.StatusBadgeRow
 import com.yash.chargemeterpro.ui.theme.GraphBatteryPct
 import com.yash.chargemeterpro.ui.theme.GraphCurrent
@@ -42,6 +42,7 @@ import com.yash.chargemeterpro.ui.theme.GraphVoltage
 import com.yash.chargemeterpro.ui.theme.GraphWattage
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
+import com.yash.chargemeterpro.ui.theme.VoltageBlue
 
 /**
  * Live Monitor redesign: the old line-chart-per-metric graph is gone —
@@ -69,6 +70,10 @@ fun LiveMonitorScreen(viewModel: LiveMonitorViewModel = hiltViewModel()) {
 
         item {
             HeroMetricCard(state = state)
+        }
+
+        item {
+            TrendGraphCard(state = state)
         }
 
         item {
@@ -184,6 +189,26 @@ private fun HeroMetricCard(state: LiveMonitorUiState) {
     }
 }
 
+/**
+ * The live trend line for the selected metric — plots the same rolling
+ * sample buffer the hero ring and trend arrow already read from, so
+ * "is it climbing" (arrow) and "what shape has it moved in" (line) sit
+ * side by side rather than requiring a separate data source.
+ */
+@Composable
+private fun TrendGraphCard(state: LiveMonitorUiState) {
+    val points = state.graphPoints[state.selectedMetric].orEmpty()
+    InstrumentCard(modifier = Modifier.fillMaxWidth()) {
+        SparklineGraph(
+            values = points.map { it.value },
+            color = metricColor(state.selectedMetric),
+            label = "${metricLabel(state.selectedMetric)} Trend",
+            valueSuffix = " ${metricUnit(state.selectedMetric)}",
+            height = 110.dp
+        )
+    }
+}
+
 private enum class Trend { UP, DOWN, STEADY }
 
 @Composable
@@ -256,18 +281,36 @@ private fun LiveReadingsCard(state: LiveMonitorUiState) {
                 value = snapshot?.technology?.orNull(),
                 accentColor = PanelGray
             )
-            ReadingRow(
-                label = "Battery Input Power",
-                value = snapshot?.let { com.yash.chargemeterpro.domain.usecase.PowerCalculator.batteryInputPowerWatts(it) }
-                    ?.let { "%.2f".format(it) },
-                unit = "W"
-            )
-            ReadingRow(
-                label = "Capacity (charge counter)",
-                value = (snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value?.let { "%.0f".format(it / 1000.0) },
-                unit = "mAh"
-            )
-            ReadingRow(label = "Cycle Count", value = snapshot?.cycleCount?.orNull()?.toString())
+
+            androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                RingMeter(
+                    fraction = ((snapshot?.let { com.yash.chargemeterpro.domain.usecase.PowerCalculator.batteryInputPowerWatts(it) } ?: 0.0) / 30.0).toFloat(),
+                    value = snapshot?.let { com.yash.chargemeterpro.domain.usecase.PowerCalculator.batteryInputPowerWatts(it) }
+                        ?.let { "%.1f".format(it) } ?: "—",
+                    unit = "INPUT W",
+                    color = GraphWattage,
+                    size = 76.dp,
+                    strokeWidth = 7.dp
+                )
+                RingMeter(
+                    fraction = (((snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value ?: 0.0) / 5_000_000.0).toFloat(),
+                    value = (snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value?.let { "%.0f".format(it / 1000.0) } ?: "—",
+                    unit = "mAh",
+                    color = GraphBatteryPct,
+                    size = 76.dp,
+                    strokeWidth = 7.dp
+                )
+                RingMeter(
+                    fraction = ((snapshot?.cycleCount?.orNull()?.toFloat() ?: 0f) / 1000f),
+                    value = snapshot?.cycleCount?.orNull()?.toString() ?: "—",
+                    unit = "CYCLES",
+                    color = PanelGray,
+                    size = 76.dp,
+                    strokeWidth = 7.dp
+                )
+            }
         }
     }
 }
@@ -294,8 +337,16 @@ private fun ChargerAnalysisCard(state: LiveMonitorUiState) {
                 value = analysis?.fastChargeIndicated?.let { if (it) "Yes" else "No" },
                 accentColor = if (analysis?.fastChargeIndicated == true) PhosphorGreen else PanelGray
             )
-            ReadingRow(label = "Device Max Input Report", value = analysis?.deviceReportedMaxInputDetail?.orNull())
-            ReadingRow(label = "USB-PD Status", value = analysis?.usbPdStatus?.orNull())
+            StatusBadgeRow(
+                label = "Device Max Input Report",
+                value = analysis?.deviceReportedMaxInputDetail?.orNull(),
+                accentColor = VoltageBlue
+            )
+            StatusBadgeRow(
+                label = "USB-PD Status",
+                value = analysis?.usbPdStatus?.orNull(),
+                accentColor = VoltageBlue
+            )
             Spacer(modifier = Modifier.height(4.dp))
             DisclaimerText(text = PowerTerminology.WALL_OUTPUT_UNAVAILABLE_DISCLAIMER)
         }
