@@ -1,6 +1,7 @@
 package com.yash.chargemeterpro.ui.navigation
 
 import android.content.Intent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -84,7 +85,7 @@ fun ChargeMeterNavHost(
             // render their own ScreenBackTopBar instead, since those need
             // a back action rather than these shortcuts.
             if (showBottomBar) {
-                androidx.compose.material3.Box {
+                Box {
                     ChargeFlowTopBar(
                         isDarkTheme = isDarkTheme,
                         onToggleTheme = onToggleTheme,
