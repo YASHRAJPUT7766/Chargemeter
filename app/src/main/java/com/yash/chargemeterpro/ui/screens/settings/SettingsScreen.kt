@@ -169,6 +169,19 @@ private fun ThresholdsSection(vm: SettingsViewModel) {
     val highTempThreshold by vm.highTempThreshold.collectAsStateWithLifecycle()
     val criticalLowThreshold by vm.criticalLowThreshold.collectAsStateWithLifecycle()
     val slowChargeThreshold by vm.slowChargeThreshold.collectAsStateWithLifecycle()
+    val customMilestoneEnabled by vm.customMilestoneEnabled.collectAsStateWithLifecycle()
+    val savedCustomMilestone by vm.customMilestone.collectAsStateWithLifecycle()
+
+    // Local, uncommitted slider value — the user drags this freely and
+    // it only gets written to SettingsDataStore (and therefore only
+    // takes effect for the monitor service) when they tap Save. Without
+    // this, dragging the slider silently persisted a value on every
+    // pixel of movement with no clear "did my change actually apply?"
+    // moment, which is what made this feel broken before.
+    var pendingMilestone by androidx.compose.runtime.remember(savedCustomMilestone) {
+        androidx.compose.runtime.mutableStateOf(savedCustomMilestone.toFloat())
+    }
+    val hasUnsavedChange = pendingMilestone.toInt() != savedCustomMilestone
 
     Column {
         SectionHeader("Custom Thresholds", Icons.Filled.Tune, GraphTemperature)
@@ -195,6 +208,36 @@ private fun ThresholdsSection(vm: SettingsViewModel) {
                     range = 1f..15f,
                     onValueChange = vm::setSlowChargeThreshold
                 )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+                SettingsSwitchRow(
+                    title = "Stop-charging reminder",
+                    subtitle = "ChargeFlow can't stop charging by itself — Android doesn't allow that — but it will keep reminding you to unplug once you cross this limit",
+                    checked = customMilestoneEnabled,
+                    onCheckedChange = vm::setCustomMilestoneEnabled
+                )
+
+                if (customMilestoneEnabled) {
+                    ThresholdSlider(
+                        label = "Remind me to unplug at",
+                        valueText = "${pendingMilestone.toInt()}%",
+                        value = pendingMilestone,
+                        range = 50f..100f,
+                        onValueChange = { pendingMilestone = it }
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        androidx.compose.material3.Button(
+                            onClick = { vm.setCustomMilestone(pendingMilestone.toInt()) },
+                            enabled = hasUnsavedChange
+                        ) {
+                            Text(if (hasUnsavedChange) "Save" else "Saved")
+                        }
+                    }
+                }
             }
         }
     }
@@ -222,6 +265,7 @@ private fun MonitoringSection(vm: SettingsViewModel) {
     val alwaysOn by vm.alwaysOnMonitorEnabled.collectAsStateWithLifecycle()
     val autoStart by vm.autoStartMonitoring.collectAsStateWithLifecycle()
     val screenOnStats by vm.screenOnStatsEnabled.collectAsStateWithLifecycle()
+    val chargingDisplay by vm.chargingDisplayEnabled.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     val isIgnoringBatteryOptimizations by vm.isIgnoringBatteryOptimizations.collectAsStateWithLifecycle()
 
@@ -246,6 +290,13 @@ private fun MonitoringSection(vm: SettingsViewModel) {
                     subtitle = "Track whether the screen was on during charging samples",
                     checked = screenOnStats,
                     onCheckedChange = vm::setScreenOnStatsEnabled
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                SettingsSwitchRow(
+                    title = "Charging Display (lock screen)",
+                    subtitle = "Shows a full-screen animated charging readout over your lock screen every time you plug in — different from Always On Charging Monitor above, which just runs quietly in the background",
+                    checked = chargingDisplay,
+                    onCheckedChange = vm::setChargingDisplayEnabled
                 )
             }
         }
@@ -278,30 +329,26 @@ private fun MonitoringSection(vm: SettingsViewModel) {
 
 @Composable
 private fun PrivacySection(vm: SettingsViewModel) {
-    val cloudBackup by vm.cloudBackupEnabled.collectAsStateWithLifecycle()
-    val analytics by vm.analyticsConsent.collectAsStateWithLifecycle()
-
     Column {
         SectionHeader("Privacy", Icons.Filled.Shield, VoltageBlue)
         InstrumentCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 Text(
-                    "All charging history is stored only on this device by default. Nothing is uploaded unless you enable an option below.",
+                    "All charging history is stored only on this device. ChargeFlow has no server and no internet permission — nothing you do here is ever uploaded anywhere.",
                     style = MaterialTheme.typography.bodySmall,
                     color = PanelGray
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outline)
-                SettingsSwitchRow(
-                    title = "Cloud backup",
-                    subtitle = "Off by default. When enabled, charging history syncs to your account.",
-                    checked = cloudBackup,
-                    onCheckedChange = vm::setCloudBackupEnabled
-                )
-                SettingsSwitchRow(
-                    title = "Anonymous usage analytics",
-                    subtitle = "Off by default. Helps improve the app — never includes personal charging data.",
-                    checked = analytics,
-                    onCheckedChange = vm::setAnalyticsConsent
+                // Cloud backup and analytics are intentionally NOT shown as
+                // live toggles here. There's no backend wired up yet (no
+                // Firebase, no INTERNET permission in the manifest) — a
+                // toggle that saves a flag but does nothing behind it is
+                // worse than no toggle at all, because it looks like it
+                // works. These come back once real sync/analytics exist.
+                Text(
+                    "Cloud backup and usage analytics: coming in a future update.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PanelGray
                 )
             }
         }
