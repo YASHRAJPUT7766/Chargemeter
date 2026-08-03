@@ -40,8 +40,8 @@ import com.yash.chargemeterpro.domain.usecase.PowerTerminology
 import com.yash.chargemeterpro.ui.components.CapsuleMeterRow
 import com.yash.chargemeterpro.ui.components.DisclaimerText
 import com.yash.chargemeterpro.ui.components.InstrumentCard
-import com.yash.chargemeterpro.ui.components.ReadingRow
 import com.yash.chargemeterpro.ui.components.RingMeter
+import com.yash.chargemeterpro.ui.components.SparklineGraph
 import com.yash.chargemeterpro.ui.components.StatusBadgeRow
 import com.yash.chargemeterpro.ui.theme.GraphTemperature
 import com.yash.chargemeterpro.ui.theme.Hairline
@@ -171,22 +171,26 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionD
 
                         StatusBadgeRow(label = "Plug Type", value = session.plugTypeName, accentColor = PhosphorGreen)
 
-                        ReadingRow(
+                        StatusBadgeRow(
                             label = "Duration",
                             value = session.endTimeMillis?.let {
                                 val minutes = (it - session.startTimeMillis) / 60000
                                 "${minutes / 60}h ${minutes % 60}m"
-                            }
+                            },
+                            accentColor = VoltageBlue
                         )
-                        ReadingRow(
+
+                        CapsuleMeterRow(
                             label = "Max Current",
-                            value = session.maxCurrentMilliAmps?.let { "%.0f".format(it) },
-                            unit = "mA"
+                            valueText = session.maxCurrentMilliAmps?.let { "%.0f mA".format(it) } ?: "—",
+                            fraction = ((session.maxCurrentMilliAmps ?: 0.0) / 3000.0).toFloat(),
+                            color = WarningAmber
                         )
-                        ReadingRow(
+                        CapsuleMeterRow(
                             label = "Estimated Energy",
-                            value = session.estimatedEnergyWattHours?.let { "%.2f".format(it) },
-                            unit = "Wh"
+                            valueText = session.estimatedEnergyWattHours?.let { "%.2f Wh".format(it) } ?: "—",
+                            fraction = ((session.estimatedEnergyWattHours ?: 0.0) / 20.0).toFloat(),
+                            color = PhosphorGreen
                         )
 
                         if (session.minTemperatureCelsius != null && session.maxTemperatureCelsius != null) {
@@ -197,6 +201,20 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionD
                                 color = GraphTemperature
                             )
                         }
+                    }
+                }
+            }
+
+            if (state.samples.size >= 2) {
+                item {
+                    InstrumentCard(modifier = Modifier.fillMaxWidth()) {
+                        SparklineGraph(
+                            values = state.samples.mapNotNull { it.powerWatts?.toFloat() },
+                            color = PhosphorGreen,
+                            label = "Power Over Session",
+                            valueSuffix = " W",
+                            height = 120.dp
+                        )
                     }
                 }
             }
