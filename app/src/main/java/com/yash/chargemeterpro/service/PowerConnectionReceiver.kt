@@ -39,11 +39,26 @@ import javax.inject.Inject
  * try/catch below also fails safe (logs, doesn't crash) if the OS
  * rejects the call on a device where the user hasn't granted that.
  *
- * On ACTION_POWER_DISCONNECTED there's nothing to do here directly —
- * the running service detects the disconnect via BatteryManager on its
- * own poll loop, closes out the session, and (per the self-stop logic
- * in ChargingMonitorService) stops itself if it was only running for
- * this one session.
+ * ACTION_POWER_DISCONNECTED is handled here too, and deliberately does
+ * the same startForegroundService() call as connect rather than nothing.
+ * The original assumption was "the already-running service will notice
+ * the unplug on its own next poll tick" — true when the service is
+ * alive, but there are real gaps where it isn't:
+ *   - Always-On Monitor is off (default) and the transient service
+ *     instance from plug-in already self-stopped for an unrelated
+ *     reason (process death, OS memory pressure, battery optimization
+ *     killing it) before the user actually unplugged.
+ *   - The user plugged in while the app's Live Monitor screen was open
+ *     (which used to record sessions locally via its own ViewModel) and
+ *     then left that screen or closed the app before unplugging — the
+ *     ViewModel is destroyed with the screen/process and was never a
+ *     reliable session owner in the first place.
+ * Starting the service here is safe and idempotent even if it's already
+ * running (Service#onStartCommand just restarts its poll loop), and its
+ * very first poll tick will see isCharging == false, read the *real*
+ * current snapshot (percent, voltage, timestamp), call endSession() with
+ * that accurate data instead of stale/missing values, and then stop
+ * itself per the existing self-stop logic in ChargingMonitorService.
  */
 @AndroidEntryPoint
 class PowerConnectionReceiver : BroadcastReceiver() {
@@ -51,12 +66,23 @@ class PowerConnectionReceiver : BroadcastReceiver() {
     @Inject lateinit var settingsDataStore: SettingsDataStore
 
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action != Intent.ACTION_POWER_CONNECTED) return
+        val action = intent?.action
+        if (action != Intent.ACTION_POWER_CONNECTED && action != Intent.ACTION_POWER_DISCONNECTED) return
 
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {
-                val autoStart = settingsDataStore.autoStartMonitoring.first()
+                // On connect, respect the "Auto-start monitoring" toggle as
+                // before. On disconnect, always try to (re)start the
+                // service regardless of that toggle — this isn't "starting
+                // a new monitoring session", it's giving whatever session
+                // may already be active one last chance to close out with
+                // real data instead of being left stuck as "Charging" in
+                // History forever. If there's no active session, the
+                // service's own idle self-stop logic quietly stops it
+                // again within a couple of poll ticks, so this is cheap.
+                val autoStart = action == Intent.ACTION_POWER_DISCONNECTED ||
+                    settingsDataStore.autoStartMonitoring.first()
                 if (autoStart) {
                     val serviceIntent = Intent(context, ChargingMonitorService::class.java)
                     try {
