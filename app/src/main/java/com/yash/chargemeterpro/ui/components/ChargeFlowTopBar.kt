@@ -57,7 +57,7 @@ fun ChargeFlowTopBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
-                    painter = painterResource(id = R.mipmap.ic_launcher_round),
+                    painter = painterResource(id = R.drawable.ic_toolbar_logo),
                     contentDescription = "ChargeFlow logo",
                     modifier = Modifier.size(40.dp)
                 )
