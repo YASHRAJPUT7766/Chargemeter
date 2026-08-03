@@ -212,7 +212,7 @@ private fun DiagnosticsCard(state: BatteryHealthUiState) {
             CapsuleMeterRow(
                 label = "Charge Counter",
                 valueText = (snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value?.let { "%.0f mAh".format(it / 1000.0) } ?: "—",
-                fraction = (((snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value ?: 0.0) / 5_000_000.0).toFloat(),
+                fraction = (((snapshot?.chargeCounterMicroAh as? AvailableOr.Value)?.value?.toDouble() ?: 0.0) / 5_000_000.0).toFloat(),
                 color = PhosphorGreen
             )
         }
