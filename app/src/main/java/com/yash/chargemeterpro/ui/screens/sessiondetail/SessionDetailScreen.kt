@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -84,7 +86,18 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionD
 
     Column(modifier = Modifier.fillMaxSize()) {
         androidx.compose.material3.TopAppBar(
-            title = { Text("Session Detail") },
+            title = {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(
+                            id = com.yash.chargemeterpro.R.drawable.ic_launcher_foreground
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Text("Session Detail", modifier = Modifier.padding(start = 10.dp))
+                }
+            },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
