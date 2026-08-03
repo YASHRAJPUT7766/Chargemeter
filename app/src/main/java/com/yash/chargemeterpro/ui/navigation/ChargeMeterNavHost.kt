@@ -1,19 +1,28 @@
 package com.yash.chargemeterpro.ui.navigation
 
 import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,8 +30,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -45,6 +58,9 @@ import com.yash.chargemeterpro.ui.screens.sessiondetail.SessionDetailScreen
 import com.yash.chargemeterpro.ui.screens.settings.SettingsScreen
 import com.yash.chargemeterpro.ui.screens.speedtest.SpeedTestScreen
 import com.yash.chargemeterpro.ui.screens.statistics.StatisticsScreen
+import com.yash.chargemeterpro.ui.theme.Hairline
+import com.yash.chargemeterpro.ui.theme.PanelGray
+import com.yash.chargemeterpro.ui.theme.PhosphorGreen
 
 @Composable
 fun ChargeMeterNavHost(
@@ -127,7 +143,16 @@ fun ChargeMeterNavHost(
             composable(Destination.Home.route) {
                 HomeScreen(
                     onNavigateToLiveMonitor = { navController.navigate(Destination.LiveMonitor.route) },
-                    onNavigateToSpeedTest = { navController.navigate(Destination.SpeedTest.route) }
+                    onNavigateToSpeedTest = { navController.navigate(Destination.SpeedTest.route) },
+                    onNavigateToHistory = {
+                        navController.navigate(Destination.History.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
             composable(Destination.LiveMonitor.route) {
@@ -194,23 +219,75 @@ fun ChargeMeterNavHost(
 
 @Composable
 private fun ChargeMeterBottomBar(navController: NavHostController, currentRoute: String?) {
-    NavigationBar {
-        bottomNavItems.forEach { item ->
-            NavigationBarItem(
-                selected = currentRoute == item.destination.route,
-                onClick = {
-                    navController.navigate(item.destination.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        contentColor = PanelGray
+    ) {
+        Column {
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Hairline))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 6.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                bottomNavItems.forEach { item ->
+                    val selected = currentRoute == item.destination.route
+                    BottomNavPillItem(
+                        icon = item.icon,
+                        label = item.label,
+                        selected = selected,
+                        onClick = {
+                            if (!selected) {
+                                navController.navigate(item.destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
                         }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) }
-            )
+                    )
+                }
+            }
         }
+    }
+}
+
+/**
+ * A single bottom-nav destination, styled to match the ChargeFlow spec:
+ * the active tab gets a soft green pill behind its icon+label and both
+ * turn phosphor green; inactive tabs stay plain panel-gray. Shown
+ * identically on every top-level screen (Home, Stats, History, Settings)
+ * since ChargeMeterBottomBar lives in the shared Scaffold.
+ */
+@Composable
+private fun BottomNavPillItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val color = if (selected) PhosphorGreen else PanelGray
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (selected) PhosphorGreen.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 8.dp)
+    ) {
+        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(22.dp))
+        androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+        )
     }
 }
 
