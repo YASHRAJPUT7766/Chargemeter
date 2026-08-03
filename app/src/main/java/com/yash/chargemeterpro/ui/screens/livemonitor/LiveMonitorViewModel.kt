@@ -1,14 +1,18 @@
 package com.yash.chargemeterpro.ui.screens.livemonitor
 
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yash.chargemeterpro.data.repository.BatteryRepository
-import com.yash.chargemeterpro.data.repository.ChargingSessionRepository
 import com.yash.chargemeterpro.domain.model.BatterySnapshot
 import com.yash.chargemeterpro.domain.usecase.ChargerAnalysis
 import com.yash.chargemeterpro.domain.usecase.ChargerAnalyzer
 import com.yash.chargemeterpro.domain.usecase.PowerCalculator
+import com.yash.chargemeterpro.service.ChargingMonitorService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,28 +27,43 @@ data class LiveMonitorUiState(
     val snapshot: BatterySnapshot? = null,
     val chargerAnalysis: ChargerAnalysis? = null,
     val selectedMetric: GraphMetric = GraphMetric.WATTAGE,
-    val graphPoints: Map<GraphMetric, List<GraphPoint>> = emptyMap(),
-    val isRecordingLocally: Boolean = false
+    val graphPoints: Map<GraphMetric, List<GraphPoint>> = emptyMap()
 )
 
 /**
  * Drives the Live Monitor screen: keeps a capped in-memory ring buffer per
  * graph metric (feature #4, "Live Charging Graphs" — switchable between
- * Wattage/Current/Voltage/Battery%/Temperature vs Time), and, if the
- * Always-On foreground service is NOT currently running a session, also
- * takes on lightweight local session recording itself so charging
- * history/graphs still populate correctly for users who haven't enabled
- * that background service — matching the spec's "Whenever charging
- * starts, automatically create a charging session" requirement
- * regardless of which recording path is active. Both paths write through
- * the same ChargingSessionRepository, so History/Statistics can't tell
- * (and don't need to care) which one produced a given session.
+ * Wattage/Current/Voltage/Battery%/Temperature vs Time) for the live
+ * ring/sparkline visuals only.
+ *
+ * Session recording (start/sample/end) is deliberately NOT owned here
+ * anymore. It used to be: this ViewModel would start+end its own "local"
+ * session whenever charging was detected while this screen happened to be
+ * open. That seemed harmless because ChargingSessionRepository.startSession
+ * is idempotent, but ending a session correctly needs somebody to still be
+ * around and watching at the moment the charger is unplugged — and this
+ * ViewModel is destroyed the instant the user leaves this screen,
+ * backgrounds the app, or closes it entirely. In practice that left
+ * sessions stuck with a null end time/percent/voltage in History forever
+ * ("Charging" shown indefinitely, exit stats never recorded) any time the
+ * user didn't happen to still be sitting on this exact screen at unplug
+ * time — which is the common case, not the edge case.
+ *
+ * Instead, opening this screen while charging is a strong signal to make
+ * sure the durable, foreground ChargingMonitorService is running — that
+ * service is the single owner of session start/sample/end, survives the
+ * screen closing, the app backgrounding, and the app being swiped away
+ * entirely, and (via PowerConnectionReceiver) is also nudged awake right
+ * at unplug time specifically to close out the session accurately. Both
+ * this screen and the service still read from the same live snapshot flow
+ * for the on-screen numbers, so what's displayed here matches what's
+ * ultimately persisted.
  */
 @HiltViewModel
 class LiveMonitorViewModel @Inject constructor(
     private val batteryRepository: BatteryRepository,
     private val chargerAnalyzer: ChargerAnalyzer,
-    private val sessionRepository: ChargingSessionRepository
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val maxPointsPerMetric = 240 // ~8 minutes at 2s cadence — enough for a readable live graph without unbounded memory growth
@@ -55,7 +74,12 @@ class LiveMonitorViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LiveMonitorUiState())
     val uiState: StateFlow<LiveMonitorUiState> = _uiState.asStateFlow()
 
-    private var localSessionId: Long? = null
+    // Tracks whether we've already asked the service to start for the
+    // charging session currently in progress, so we don't call
+    // startForegroundService() on every single snapshot tick — only once
+    // per charging session (reset back to false as soon as we observe
+    // charging has stopped).
+    private var serviceNudgedForCurrentSession = false
 
     init {
         viewModelScope.launch {
@@ -79,13 +103,12 @@ class LiveMonitorViewModel @Inject constructor(
         appendPoint(GraphMetric.BATTERY_PERCENT, snap.timestampMillis, snap.batteryPercent.toFloat())
         appendPoint(GraphMetric.TEMPERATURE, snap.timestampMillis, snap.temperatureC?.toFloat())
 
-        maybeRecordLocalSession(snap)
+        ensureServiceRunningIfCharging(snap)
 
         _uiState.value = _uiState.value.copy(
             snapshot = snap,
             chargerAnalysis = analysis,
-            graphPoints = buffers.mapValues { it.value.toList() },
-            isRecordingLocally = localSessionId != null
+            graphPoints = buffers.mapValues { it.value.toList() }
         )
     }
 
@@ -97,46 +120,45 @@ class LiveMonitorViewModel @Inject constructor(
     }
 
     /**
-     * Records a local session whenever charging is happening and this
-     * ViewModel doesn't already believe it owns one. We deliberately do
-     * NOT pre-query the DB for an existing active session on every tick
-     * (that would mean a suspend DB read every 2s) — instead we rely on
-     * ChargingSessionRepository.startSession()'s own guard: if the
-     * foreground service already created an active session, startSession
-     * returns that existing session's id rather than inserting a
-     * duplicate, so calling it here is always safe and idempotent even
-     * if both this ViewModel and the service are active at once.
+     * Makes sure ChargingMonitorService is alive whenever this screen
+     * observes charging in progress, instead of this ViewModel recording
+     * a session it can't reliably finish. startForegroundService() is
+     * cheap and safe to call redundantly (Service#onStartCommand just
+     * restarts the poll loop if it's already running), but we still only
+     * call it once per session start — via serviceNudgedForCurrentSession
+     * — rather than on every ~2s tick, purely to avoid spamming the
+     * platform call for no benefit.
      *
-     * Sample WRITES are a separate concern from session creation, though:
-     * if the Always-On service is also running (same active session,
-     * different poll loop at its own ~15s cadence), both this
-     * ViewModel's ~2s ticks and the service's ticks would otherwise both
-     * call recordSample() for the same session, producing denser-than-
-     * intended and partially redundant rows. We guard against that with
-     * a minimum spacing check — only write a sample if enough time has
-     * passed since the last one we wrote — which naturally converges to
-     * "whichever caller writes more often wins" without needing the two
-     * components to coordinate directly.
+     * The service itself decides (via its own autoStartMonitoring /
+     * alwaysOnMonitorEnabled checks) whether to actually create a session
+     * row; this call is just "wake up and look," matching what
+     * PowerConnectionReceiver already does on ACTION_POWER_CONNECTED —
+     * this is the same nudge, just also covering the case where the user
+     * opens Live Monitor mid-charge (e.g. after a reboot, or if the
+     * connect broadcast was missed) rather than only at plug-in time.
      */
-    private var lastSampleWriteMillis = 0L
-    private val minSampleSpacingMillis = 1_500L // slightly under our own 2s foreground cadence
-
-    private suspend fun maybeRecordLocalSession(snap: BatterySnapshot) {
-        when {
-            snap.isCharging && localSessionId == null -> {
-                localSessionId = sessionRepository.startSession(snap)
-                lastSampleWriteMillis = snap.timestampMillis
-            }
-            snap.isCharging && localSessionId != null -> {
-                if (snap.timestampMillis - lastSampleWriteMillis >= minSampleSpacingMillis) {
-                    sessionRepository.recordSample(localSessionId!!, snap)
-                    lastSampleWriteMillis = snap.timestampMillis
+    private fun ensureServiceRunningIfCharging(snap: BatterySnapshot) {
+        if (snap.isCharging) {
+            if (!serviceNudgedForCurrentSession) {
+                serviceNudgedForCurrentSession = true
+                try {
+                    ContextCompat.startForegroundService(
+                        appContext,
+                        Intent(appContext, ChargingMonitorService::class.java)
+                    )
+                } catch (e: IllegalStateException) {
+                    // Foreground-service start restriction rejected the
+                    // call (rare from an active foreground screen, since
+                    // the app itself being in the foreground is normally
+                    // an exemption) — fail safe rather than crash the UI.
+                    android.util.Log.w(
+                        "LiveMonitorViewModel",
+                        "Could not ensure ChargingMonitorService is running: ${e.message}"
+                    )
                 }
             }
-            !snap.isCharging && localSessionId != null -> {
-                sessionRepository.endSession(localSessionId!!, snap, completedNormally = true)
-                localSessionId = null
-            }
+        } else {
+            serviceNudgedForCurrentSession = false
         }
     }
 
