@@ -24,18 +24,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Must be called before super.onCreate() so the system draws the
         // splash window immediately on cold start, straight from local
-        // resources — no network or database read is on this path, which
-        // is what removes the old "jump straight to main screen" lag.
+        // resources. This system-level splash is now intentionally very
+        // brief — just long enough to avoid a blank-window flash while
+        // Compose spins up. The *real* branded splash experience (progress
+        // bar, "Loading...", logo animation) is rendered in Compose by
+        // OnboardingSplashStage / OnboardingScreen once ChargeMeterNavHost
+        // decides which flow to show, based on onboardingComplete from
+        // SettingsDataStore.
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Hold the splash for a short fixed minimum so it reads as an
-        // intentional brand moment instead of a flicker, capped well
-        // under the ~2s target from cold start. Pure local timer — works
-        // identically with or without connectivity.
         val splashStartMillis = SystemClock.elapsedRealtime()
-        val minimumSplashDurationMillis = 700L
+        val minimumSplashDurationMillis = 150L
         splashScreen.setKeepOnScreenCondition {
             SystemClock.elapsedRealtime() - splashStartMillis < minimumSplashDurationMillis
         }
@@ -49,6 +50,7 @@ class MainActivity : ComponentActivity() {
             val viewModel: com.yash.chargemeterpro.ui.MainActivityViewModel = androidx.hilt.navigation.compose.hiltViewModel()
             val themeMode by viewModel.themeMode.collectAsState(initial = "dark")
             val useDynamicColor by viewModel.useDynamicColor.collectAsState(initial = false)
+            val onboardingComplete by viewModel.onboardingComplete.collectAsState(initial = null)
 
             val darkTheme = when (themeMode) {
                 "dark" -> true
@@ -60,7 +62,9 @@ class MainActivity : ComponentActivity() {
                 NotificationPermissionRequester()
                 ChargeMeterNavHost(
                     isDarkTheme = darkTheme,
-                    onToggleTheme = { viewModel.toggleTheme(currentlyResolvedDark = darkTheme) }
+                    onToggleTheme = { viewModel.toggleTheme(currentlyResolvedDark = darkTheme) },
+                    onboardingComplete = onboardingComplete,
+                    onOnboardingFinished = { viewModel.markOnboardingComplete() }
                 )
             }
         }
