@@ -57,9 +57,20 @@ fun ChargeFlowTopBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_toolbar_logo),
+                    // Uses the transparent-background launcher-foreground
+                    // artwork rather than ic_toolbar_logo, which has a
+                    // black rounded-square baked directly into the PNG.
+                    // That baked-in box only blended in on the dark theme
+                    // by coincidence — it showed as a hard black tile
+                    // behind the logo on the light theme (and anywhere
+                    // else the surrounding background wasn't that exact
+                    // dark shade). ic_launcher_foreground is the same
+                    // artwork with a real transparent background, so it
+                    // sits cleanly on whatever surface color is behind it
+                    // in either theme.
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
                     contentDescription = "ChargeFlow logo",
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(48.dp)
                 )
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Text(
