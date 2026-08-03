@@ -22,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +59,7 @@ import com.yash.chargemeterpro.ui.screens.sessiondetail.SessionDetailScreen
 import com.yash.chargemeterpro.ui.screens.settings.SettingsScreen
 import com.yash.chargemeterpro.ui.screens.speedtest.SpeedTestScreen
 import com.yash.chargemeterpro.ui.screens.statistics.StatisticsScreen
-import com.yash.chargemeterpro.ui.theme.Hairline
+import com.yash.chargemeterpro.ui.theme.InstrumentSurfaceRaised
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
 
@@ -257,42 +256,46 @@ fun ChargeMeterNavHost(
     }
 }
 
+/**
+ * Floating capsule nav bar, matching the ChargeFlow reference: the whole
+ * bar sits as one rounded, elevated pill with margin around it (not an
+ * edge-to-edge bar with a top divider line), and the active tab gets its
+ * own smaller green-tinted pill inside that. Previously this used a
+ * full-width bar with a 1px divider line and no outer rounding —
+ * visually flat/edge-to-edge rather than the floating-capsule look in the
+ * design reference.
+ */
 @Composable
 private fun ChargeMeterBottomBar(navController: NavHostController, currentRoute: String?) {
-    Surface(
-        color = MaterialTheme.colorScheme.background,
-        contentColor = PanelGray
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(InstrumentSurfaceRaised)
+            .padding(horizontal = 6.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Hairline))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 6.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                bottomNavItems.forEach { item ->
-                    val selected = currentRoute == item.destination.route
-                    BottomNavPillItem(
-                        icon = item.icon,
-                        label = item.label,
-                        selected = selected,
-                        onClick = {
-                            if (!selected) {
-                                navController.navigate(item.destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+        bottomNavItems.forEach { item ->
+            val selected = currentRoute == item.destination.route
+            BottomNavPillItem(
+                icon = item.icon,
+                label = item.label,
+                selected = selected,
+                onClick = {
+                    if (!selected) {
+                        navController.navigate(item.destination.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
                             }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                    )
+                    }
                 }
-            }
+            )
         }
     }
 }
