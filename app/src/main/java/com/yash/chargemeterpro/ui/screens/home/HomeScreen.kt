@@ -93,6 +93,7 @@ fun HomeScreen(
     onNavigateToLiveMonitor: () -> Unit,
     onNavigateToSpeedTest: () -> Unit,
     onNavigateToHistory: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     liveState: LiveBatteryStateViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -139,6 +140,17 @@ fun HomeScreen(
                     onClick = onNavigateToLiveMonitor
                 )
             }
+        }
+
+        item {
+            FeatureShortcutCard(
+                title = "Charging Display",
+                description = "Animated charging readout on your lock screen — turn on in Settings",
+                icon = Icons.Filled.Bolt,
+                accentColor = PhosphorGreen,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onNavigateToSettings
+            )
         }
 
         item {
