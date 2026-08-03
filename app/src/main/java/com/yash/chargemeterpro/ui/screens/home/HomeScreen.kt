@@ -44,7 +44,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yash.chargemeterpro.domain.model.BatterySnapshot
@@ -57,6 +56,7 @@ import com.yash.chargemeterpro.ui.LiveBatteryStateViewModel
 import com.yash.chargemeterpro.ui.components.InstrumentCard
 import com.yash.chargemeterpro.ui.components.RingMeter
 import com.yash.chargemeterpro.ui.components.SparklineGraph
+import com.yash.chargemeterpro.ui.components.WattMeterGauge
 import com.yash.chargemeterpro.ui.theme.GraphBatteryPct
 import com.yash.chargemeterpro.ui.theme.Hairline
 import com.yash.chargemeterpro.ui.theme.PanelGray
@@ -296,45 +296,32 @@ private fun BatteryGlowIllustration(percent: Int, isCharging: Boolean) {
 @Composable
 private fun StatsGridCard(snapshot: BatterySnapshot?) {
     val powerWatts = snapshot?.let { PowerCalculator.batteryInputPowerWatts(it) }
-    val wattFraction = powerWatts?.let { (it / WATT_RING_MAX_SCALE).toFloat().coerceIn(0f, 1f) } ?: 0f
     val voltage = snapshot?.voltageVolts
     val currentMa = snapshot?.currentMilliAmpsNormalized
     val tempC = snapshot?.temperatureC
 
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = HomeFormatters.wattsText(powerWatts),
-                    style = MaterialTheme.typography.displayLarge.copy(fontSize = 40.sp),
-                    fontWeight = FontWeight.Bold,
-                    color = PhosphorGreen
-                )
-                Text(
-                    text = "W",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = PanelGray,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
-                )
-            }
             Text("CHARGING POWER", style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            // Big ring speedometer — the hero instrument for this card
-            RingMeter(
-                fraction = wattFraction,
-                value = HomeFormatters.wattsText(powerWatts),
-                unit = "WATTS",
-                color = PhosphorGreen,
-                size = 168.dp,
-                strokeWidth = 14.dp
+            // Big analog-style speedometer — tick marks + sweep-gradient
+            // arc + large center wattage reading. This is the same
+            // WattMeterGauge used elsewhere in the app (Live Monitor /
+            // Speed Test), reused here as the Home screen's hero
+            // instrument so the Watt reading actually looks like a meter.
+            WattMeterGauge(
+                currentWatts = powerWatts,
+                maxScaleWatts = WATT_RING_MAX_SCALE,
+                modifier = Modifier
+                    .fillMaxWidth(0.72f)
+                    .padding(top = 4.dp)
             )
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // Three smaller rings, visibly smaller than the Watt ring above
+            // Three smaller rings, visibly smaller than the Watt gauge above
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 MiniStatRing(
                     label = "VOLTAGE",
