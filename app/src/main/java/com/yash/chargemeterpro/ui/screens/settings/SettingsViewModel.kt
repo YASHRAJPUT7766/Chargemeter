@@ -62,11 +62,13 @@ class SettingsViewModel @Inject constructor(
     val highTempThreshold = asState(settingsDataStore.highTempThresholdC, 45f)
     val criticalLowThreshold = asState(settingsDataStore.criticalLowThresholdPercent, 15)
     val slowChargeThreshold = asState(settingsDataStore.slowChargeThresholdWatts, 5.0f)
-    val customMilestone = asState(settingsDataStore.customMilestonePercent, 0)
+    val customMilestone = asState(settingsDataStore.customMilestonePercent, 80)
+    val customMilestoneEnabled = asState(settingsDataStore.customMilestoneEnabled, false)
 
     val alwaysOnMonitorEnabled = asState(settingsDataStore.alwaysOnMonitorEnabled, false)
     val autoStartMonitoring = asState(settingsDataStore.autoStartMonitoring, true)
     val screenOnStatsEnabled = asState(settingsDataStore.screenOnStatsEnabled, true)
+    val chargingDisplayEnabled = asState(settingsDataStore.chargingDisplayEnabled, false)
     val cloudBackupEnabled = asState(settingsDataStore.cloudBackupEnabled, false)
     val analyticsConsent = asState(settingsDataStore.analyticsConsent, false)
 
@@ -88,6 +90,7 @@ class SettingsViewModel @Inject constructor(
     fun setCriticalLowThreshold(percent: Int) = viewModelScope.launch { settingsDataStore.setCriticalLowThreshold(percent) }
     fun setSlowChargeThreshold(watts: Float) = viewModelScope.launch { settingsDataStore.setSlowChargeThreshold(watts) }
     fun setCustomMilestone(percent: Int) = viewModelScope.launch { settingsDataStore.setCustomMilestone(percent) }
+    fun setCustomMilestoneEnabled(enabled: Boolean) = viewModelScope.launch { settingsDataStore.setCustomMilestoneEnabled(enabled) }
 
     /**
      * Turning Always-On Monitor on/off doesn't just persist a preference —
@@ -107,6 +110,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setAutoStartMonitoring(enabled: Boolean) = viewModelScope.launch { settingsDataStore.setAutoStartMonitoring(enabled) }
     fun setScreenOnStatsEnabled(enabled: Boolean) = viewModelScope.launch { settingsDataStore.setScreenOnStatsEnabled(enabled) }
+    fun setChargingDisplayEnabled(enabled: Boolean) = viewModelScope.launch { settingsDataStore.setChargingDisplayEnabled(enabled) }
 
     /** Cloud backup is off by default and this is the ONLY place it can be turned on — always with the user directly tapping the toggle. */
     fun setCloudBackupEnabled(enabled: Boolean) = viewModelScope.launch { settingsDataStore.setCloudBackupEnabled(enabled) }
