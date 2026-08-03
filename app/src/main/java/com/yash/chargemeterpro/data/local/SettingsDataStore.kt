@@ -47,7 +47,8 @@ class SettingsDataStore @Inject constructor(
         val THRESHOLD_HIGH_TEMP_C = floatPreferencesKey("threshold_high_temp_c")
         val THRESHOLD_CRITICAL_LOW_PERCENT = intPreferencesKey("threshold_critical_low_percent")
         val THRESHOLD_SLOW_CHARGE_WATTS = floatPreferencesKey("threshold_slow_charge_watts")
-        val CUSTOM_MILESTONE_PERCENT = intPreferencesKey("custom_milestone_percent") // 0 = disabled
+        val CUSTOM_MILESTONE_PERCENT = intPreferencesKey("custom_milestone_percent") // stop-charging reminder target, e.g. 80
+        val CUSTOM_MILESTONE_ENABLED = booleanPreferencesKey("custom_milestone_enabled")
 
         val NOTIFICATION_SOUND_URI = stringPreferencesKey("notification_sound_uri")
 
@@ -55,6 +56,7 @@ class SettingsDataStore @Inject constructor(
         val ALWAYS_ON_MONITOR_ENABLED = booleanPreferencesKey("always_on_monitor_enabled")
         val AUTO_START_MONITORING = booleanPreferencesKey("auto_start_monitoring")
         val SCREEN_ON_STATS_ENABLED = booleanPreferencesKey("screen_on_stats_enabled")
+        val CHARGING_DISPLAY_ENABLED = booleanPreferencesKey("charging_display_enabled")
         val CLOUD_BACKUP_ENABLED = booleanPreferencesKey("cloud_backup_enabled") // OFF by default, explicit opt-in
         val ANALYTICS_CONSENT = booleanPreferencesKey("analytics_consent") // OFF by default, explicit opt-in
 
@@ -127,9 +129,14 @@ class SettingsDataStore @Inject constructor(
     suspend fun setSlowChargeThreshold(watts: Float) =
         context.dataStore.edit { it[Keys.THRESHOLD_SLOW_CHARGE_WATTS] = watts }
 
-    val customMilestonePercent: Flow<Int> = context.dataStore.data.map { it[Keys.CUSTOM_MILESTONE_PERCENT] ?: 0 }
+    val customMilestonePercent: Flow<Int> = context.dataStore.data.map { it[Keys.CUSTOM_MILESTONE_PERCENT] ?: 80 }
     suspend fun setCustomMilestone(percent: Int) =
         context.dataStore.edit { it[Keys.CUSTOM_MILESTONE_PERCENT] = percent }
+
+    /** Off by default — the custom threshold reminder only fires once the user explicitly turns it on AND saves a value. */
+    val customMilestoneEnabled: Flow<Boolean> = boolPref(Keys.CUSTOM_MILESTONE_ENABLED, false)
+    suspend fun setCustomMilestoneEnabled(enabled: Boolean) =
+        context.dataStore.edit { it[Keys.CUSTOM_MILESTONE_ENABLED] = enabled }
 
     val notificationSoundUri: Flow<String?> = context.dataStore.data.map { it[Keys.NOTIFICATION_SOUND_URI] }
     suspend fun setNotificationSoundUri(uri: String?) = context.dataStore.edit {
@@ -148,6 +155,16 @@ class SettingsDataStore @Inject constructor(
     val screenOnStatsEnabled: Flow<Boolean> = boolPref(Keys.SCREEN_ON_STATS_ENABLED, true)
     suspend fun setScreenOnStatsEnabled(enabled: Boolean) =
         context.dataStore.edit { it[Keys.SCREEN_ON_STATS_ENABLED] = enabled }
+
+    /**
+     * Off by default — this launches a full-screen activity over the
+     * lock screen the moment charging starts, which is exactly the kind
+     * of behavior that should require explicit opt-in rather than
+     * surprising the user on first charge after an update.
+     */
+    val chargingDisplayEnabled: Flow<Boolean> = boolPref(Keys.CHARGING_DISPLAY_ENABLED, false)
+    suspend fun setChargingDisplayEnabled(enabled: Boolean) =
+        context.dataStore.edit { it[Keys.CHARGING_DISPLAY_ENABLED] = enabled }
 
     /**
      * OFF by default — cloud backup is an explicit opt-in per the privacy
