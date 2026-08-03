@@ -71,6 +71,20 @@
             </intent-filter>
         </activity>
 
+        <!-- Full-screen "Charging Display" — shows over the lock screen when
+             charging starts, if the user opts in via Settings. showWhenLocked
+             and turnScreenOn are also set programmatically in the Activity
+             (required on API 27+); the manifest attributes below are the
+             legacy/manifest-level declaration some OEM skins still check. -->
+        <activity
+            android:name=".ui.screens.chargingdisplay.ChargingDisplayActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.ChargeMeterPro" />
+
         <!-- Foreground service backing the optional "Always On Charging Monitor".
              Only started when the user explicitly enables it in Settings, and it
              shows a persistent, dismiss-proof-by-design notification while active
