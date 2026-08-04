@@ -53,6 +53,8 @@ import com.yash.chargemeterpro.ui.theme.PanelGrayDim
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
 import com.yash.chargemeterpro.ui.theme.VoltageBlue
 import com.yash.chargemeterpro.ui.theme.WarningAmber
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -76,6 +78,22 @@ fun UsageScreen(
     // via back navigation), since there's no in-process callback for that
     // grant — it's a system settings toggle, not an Activity result.
     LaunchedEffect(Unit) { viewModel.refreshPermissionAndLoad() }
+
+    // Keeps today's total screen time and per-app list advancing while
+    // this screen stays open, instead of freezing at whatever the totals
+    // were the moment the screen first loaded. refreshIfToday() itself
+    // no-ops on any day other than today, so this is a cheap poll even
+    // while the user has swiped back to a past day. LaunchedEffect ties
+    // this loop to composition — leaving the screen cancels it
+    // automatically, so it never polls while not visible. 30s matches
+    // the cadence Digital-Wellbeing-style screens typically use: live
+    // enough to feel real-time without hammering UsageStatsManager.
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            delay(30_000)
+            viewModel.refreshIfToday()
+        }
+    }
 
     when (state.permissionState) {
         UsagePermissionState.NOT_GRANTED -> UsagePermissionGate(

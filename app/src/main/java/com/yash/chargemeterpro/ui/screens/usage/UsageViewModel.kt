@@ -56,6 +56,32 @@ class UsageViewModel @Inject constructor(
     fun canGoNext(): Boolean = _uiState.value.selectedEpochDay < today
     fun canGoPrevious(): Boolean = _uiState.value.selectedEpochDay > _uiState.value.earliestEpochDay
 
+    /**
+     * Re-queries the currently selected day's summary, but only when
+     * that day is today — a past day's totals are already final and
+     * re-querying them is pure wasted work (a UsageStatsManager call is
+     * not free). Meant to be called periodically (see UsageScreen's
+     * LaunchedEffect polling loop) so the donut and per-app list keep
+     * advancing in real time while the user is looking at today and the
+     * screen stays open, instead of freezing at whatever the total was
+     * at the moment the screen first loaded.
+     *
+     * Deliberately skips the isLoading flip that loadDay() does for the
+     * user-initiated path — a silent background refresh shouldn't flash
+     * a spinner over data that's already on screen and still valid.
+     */
+    fun refreshIfToday() {
+        val state = _uiState.value
+        if (state.permissionState != UsagePermissionState.GRANTED) return
+        if (state.selectedEpochDay != today) return
+        viewModelScope.launch {
+            val summary = repository.getDailySummary(today)
+            if (_uiState.value.selectedEpochDay == today) {
+                _uiState.value = _uiState.value.copy(summary = summary)
+            }
+        }
+    }
+
     private fun loadDay(epochDay: Long) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
