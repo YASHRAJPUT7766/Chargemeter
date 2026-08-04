@@ -1,5 +1,7 @@
 package com.yash.chargemeterpro.ui.screens.batteryhealth
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,14 +13,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -61,61 +70,82 @@ fun BatteryHealthScreen(viewModel: BatteryHealthViewModel = hiltViewModel()) {
     }
 }
 
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+/**
+ * Top hero card: big "100%  Excellent" reading + capacity-fade box on the
+ * left, a glowing bolt-in-ring icon on the right — matches the reference
+ * layout the user asked to match (score-as-percent, qualitative label,
+ * capacity fade called out separately, no numeric "based on" chip list).
+ */
 @Composable
 private fun HealthScoreCard(result: BatteryHealthScorer.HealthScoreResult?) {
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
         when (result) {
             is BatteryHealthScorer.HealthScoreResult.Score -> {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        "Battery Health Score",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Box(contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(
-                            progress = { result.value / 100f },
-                            modifier = Modifier.size(140.dp),
-                            strokeWidth = 10.dp,
-                            color = scoreColor(result.value),
-                            trackColor = MaterialTheme.colorScheme.outline
-                        )
+                val color = scoreColor(result.value)
+                val label = scoreLabel(result.value)
+                val fadeText = result.basedOn
+                    .firstOrNull { it.startsWith("Estimated capacity fade") }
+                    ?.substringAfter(": ")
+                    ?: "—"
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "${result.value}",
-                            style = MaterialTheme.typography.displayLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = scoreColor(result.value)
+                            "Battery Health",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = PanelGray
                         )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Based on:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PanelGray
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    androidx.compose.foundation.layout.FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        result.basedOn.forEach { line ->
-                            androidx.compose.material3.Surface(
-                                color = scoreColor(result.value).copy(alpha = 0.14f),
-                                shape = MaterialTheme.shapes.small
-                            ) {
-                                Text(
-                                    line,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = scoreColor(result.value),
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                )
-                            }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                "${result.value}",
+                                style = MaterialTheme.typography.displayLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = color
+                            )
+                            Text(
+                                "%",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = color,
+                                modifier = Modifier.padding(bottom = 6.dp, start = 2.dp)
+                            )
+                        }
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = color
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Column(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                        ) {
+                            Text(
+                                "Estimated capacity fade",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = PanelGray
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                fadeText,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = PhosphorGreen
+                            )
                         }
                     }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    GlowingBoltRing(color = color)
                 }
+                Spacer(modifier = Modifier.height(4.dp))
             }
             is BatteryHealthScorer.HealthScoreResult.InsufficientData -> {
                 Column {
@@ -135,12 +165,44 @@ private fun HealthScoreCard(result: BatteryHealthScorer.HealthScoreResult?) {
     }
 }
 
+/** Concentric glow-ring with a bolt glyph in the center — the "Excellent" badge icon in the reference image. */
 @Composable
+private fun GlowingBoltRing(color: Color) {
+    Box(modifier = Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.10f))
+        )
+        Box(
+            modifier = Modifier
+                .size(74.dp)
+                .clip(CircleShape)
+                .background(Color.Transparent)
+                .border(3.dp, color, CircleShape)
+        )
+        Icon(
+            imageVector = Icons.Filled.Bolt,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(34.dp)
+        )
+    }
+}
+
 private fun scoreColor(score: Int) = when {
     score >= 80 -> PhosphorGreen
     score >= 60 -> VoltageBlue
     score >= 40 -> WarningAmber
     else -> CriticalRed
+}
+
+private fun scoreLabel(score: Int) = when {
+    score >= 90 -> "Excellent"
+    score >= 75 -> "Good"
+    score >= 50 -> "Fair"
+    else -> "Poor"
 }
 
 @Composable
