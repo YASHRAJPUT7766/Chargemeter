@@ -156,6 +156,39 @@ class UsageStatsRepository @Inject constructor(
      * ACTIVITY_RESUMED/PAUSED on API 29+) pairs ourselves, clipped to
      * [startMillis, endMillis], gives a consistent per-day number no
      * matter the device.
+     *
+     * Real-device event-stream quirks this specifically guards against —
+     * all three previously caused apps to be undercounted, dropped
+     * entirely, or credited with a bogus duration:
+     *
+     * 1. ORPHANED PAUSE: an app opened *before* startMillis (e.g. before
+     *    local midnight, still open when the new day's query window
+     *    begins) has no resume event inside [startMillis, endMillis] —
+     *    only the pause when it's eventually backgrounded. Previously
+     *    this pause was silently discarded (`?: continue`), losing that
+     *    app's entire time from midnight to the pause. It's now treated
+     *    as "was already open at window start" and credited from
+     *    startMillis instead.
+     *
+     * 2. DUPLICATE RESUME: on API 29+, real devices commonly emit BOTH
+     *    MOVE_TO_FOREGROUND and ACTIVITY_RESUMED for the same single
+     *    transition (and both BACKGROUND/PAUSED on exit), a few
+     *    milliseconds apart. Treating both event types as equally valid
+     *    "resume" signals meant a second resume for an already-open
+     *    package overwrote its stored open-timestamp, silently losing
+     *    the gap between the two events. A resume for a package already
+     *    marked open is now ignored — it's the same real transition
+     *    reported twice, not a new one.
+     *
+     * 3. DUPLICATE PAUSE: the mirror of #2 on the way out — a second
+     *    pause event arriving for a package that the *first* pause of
+     *    the pair already closed out. Without tracking this separately
+     *    from a genuine orphan (#1), this second pause would be
+     *    misread as "no resume seen" and incorrectly credited a bogus
+     *    duration counted all the way from startMillis. closedSincePause
+     *    tracks packages resolved this way so a duplicate pause is
+     *    correctly ignored instead, while a real orphan (never in this
+     *    set) still gets credited.
      */
     private fun aggregateForegroundTime(
         manager: UsageStatsManager,
@@ -164,6 +197,7 @@ class UsageStatsRepository @Inject constructor(
     ): Map<String, Long> {
         val result = mutableMapOf<String, Long>()
         val openedAt = mutableMapOf<String, Long>()
+        val closedSincePause = mutableSetOf<String>()
         val events = manager.queryEvents(startMillis, endMillis)
         val event = UsageEvents.Event()
 
@@ -176,11 +210,30 @@ class UsageStatsRepository @Inject constructor(
                 (android.os.Build.VERSION.SDK_INT >= 29 && event.eventType == UsageEvents.Event.ACTIVITY_PAUSED)
 
             when {
-                isResume -> openedAt[pkg] = event.timeStamp
+                isResume -> {
+                    // Ignore a resume for a package already marked open —
+                    // see DUPLICATE RESUME above. A genuine new open
+                    // clears the "just closed" marker so a *later* pause
+                    // is treated normally again.
+                    if (!openedAt.containsKey(pkg)) openedAt[pkg] = event.timeStamp
+                    closedSincePause.remove(pkg)
+                }
                 isPause -> {
-                    val start = openedAt.remove(pkg) ?: continue
-                    val duration = (event.timeStamp - start).coerceIn(0L, endMillis - startMillis)
-                    if (duration > 0) result[pkg] = (result[pkg] ?: 0L) + duration
+                    if (pkg in closedSincePause) {
+                        // Duplicate pause for a package the previous pause
+                        // already closed out — see DUPLICATE PAUSE above.
+                        // Not an orphan; just ignore it.
+                    } else {
+                        // No open entry here means either a genuine
+                        // ORPHANED PAUSE (carried over from before
+                        // startMillis) or this same case — either way,
+                        // crediting from startMillis is correct since
+                        // this is the first pause seen for the package.
+                        val start = openedAt.remove(pkg) ?: startMillis
+                        val duration = (event.timeStamp - start).coerceIn(0L, endMillis - startMillis)
+                        if (duration > 0) result[pkg] = (result[pkg] ?: 0L) + duration
+                        closedSincePause.add(pkg)
+                    }
                 }
             }
         }
