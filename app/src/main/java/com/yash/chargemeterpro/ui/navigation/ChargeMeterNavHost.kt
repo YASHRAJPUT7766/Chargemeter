@@ -185,6 +185,7 @@ fun ChargeMeterNavHost(
                 HomeScreen(
                     onNavigateToLiveMonitor = { navController.navigate(Destination.LiveMonitor.route) },
                     onNavigateToSpeedTest = { navController.navigate(Destination.SpeedTest.route) },
+                    onNavigateToCheckup = { navController.navigate(Destination.Checkup.route) },
                     onNavigateToHistory = {
                         // History is now a drill-in reached from a shortcut
                         // (Home card / Stats card / Settings row), not a
@@ -268,6 +269,17 @@ fun ChargeMeterNavHost(
             }
             composable(Destination.SpeedTest.route) {
                 SpeedTestScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Destination.Checkup.route) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    ScreenBackTopBar(
+                        title = "Battery Checkup",
+                        onBack = { navController.popBackStack() }
+                    )
+                    com.yash.chargemeterpro.ui.screens.checkup.CheckupScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
             composable(Destination.About.route) {
                 AboutScreen(onBack = { navController.popBackStack() })

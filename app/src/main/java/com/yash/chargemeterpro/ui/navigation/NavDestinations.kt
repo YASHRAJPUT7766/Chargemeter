@@ -29,6 +29,7 @@ sealed class Destination(val route: String) {
     data object Settings : Destination("settings")
 
     // Secondary / drill-in routes
+    data object Checkup : Destination("checkup")
     data object SpeedTest : Destination("speed_test")
     data object About : Destination("about")
     data object PrivacyPolicy : Destination("privacy_policy")
