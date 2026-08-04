@@ -29,7 +29,21 @@ data class DailyUsageSummary(
     val totalForegroundTimeMillis: Long,
     val appCount: Int,
     val apps: List<AppUsageInfo>,
-    val batteryDropPercent: Int?
+    val batteryDropPercent: Int?,
+    /**
+     * Real screen-unlock count for the day, from UsageEvents.KEYGUARD_HIDDEN
+     * (API 28+). Null on API <28 where that event type doesn't exist —
+     * the UI must show "—", never a fabricated number.
+     */
+    val unlockCount: Int? = null,
+    /**
+     * Foreground time bucketed into 24 hourly slots (index 0 = 12AM-1AM,
+     * ..., index 23 = 11PM-12AM) in milliseconds, for the hour-of-day
+     * sparkline. Always 24 entries; entries for hours not yet reached
+     * "today" are simply 0 because no events exist there yet — not
+     * because they were hidden.
+     */
+    val hourlyBuckets: List<Long> = List(24) { 0L }
 )
 
 /** A single bucket of usage for charting an app's history over multiple days. */

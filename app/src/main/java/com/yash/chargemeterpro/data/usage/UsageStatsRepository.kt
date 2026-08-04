@@ -97,6 +97,8 @@ class UsageStatsRepository @Inject constructor(
 
         val foregroundTimeByPackage = aggregateForegroundTime(manager, startMillis, endMillis)
         val launchCountByPackage = countLaunches(manager, startMillis, endMillis)
+        val unlockCount = countUnlocks(manager, startMillis, endMillis)
+        val hourlyBuckets = bucketForegroundTimeByHour(manager, startMillis, endMillis, zone)
         val lastUsedByPackage = mutableMapOf<String, Long>()
 
         val statsList = manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startMillis, endMillis)
@@ -133,7 +135,9 @@ class UsageStatsRepository @Inject constructor(
             totalForegroundTimeMillis = totalForegroundMillis,
             appCount = apps.size,
             apps = apps,
-            batteryDropPercent = batteryDropPercent?.let { Math.round(it) }
+            batteryDropPercent = batteryDropPercent?.let { Math.round(it) },
+            unlockCount = unlockCount,
+            hourlyBuckets = hourlyBuckets
         )
     }
 
@@ -257,6 +261,91 @@ class UsageStatsRepository @Inject constructor(
             if (isResume) counts[pkg] = (counts[pkg] ?: 0) + 1
         }
         return counts
+    }
+
+    /**
+     * Counts real screen unlocks for the window via UsageEvents.KEYGUARD_HIDDEN
+     * — fired by the system exactly when the lock screen is dismissed.
+     * Only exists from API 28 onward; returns null (not 0) below that so
+     * the UI can distinguish "genuinely zero unlocks" from "this device
+     * can't report unlocks at all" and show "—" instead of a false zero.
+     */
+    private fun countUnlocks(manager: UsageStatsManager, startMillis: Long, endMillis: Long): Int? {
+        if (android.os.Build.VERSION.SDK_INT < 28) return null
+        var count = 0
+        val events = manager.queryEvents(startMillis, endMillis)
+        val event = UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (event.eventType == UsageEvents.Event.KEYGUARD_HIDDEN) count++
+        }
+        return count
+    }
+
+    /**
+     * Re-walks the same resume/pause event stream as aggregateForegroundTime,
+     * but splits each open interval across local-hour boundaries so a
+     * session that starts at 11:50pm and ends at 12:10am is credited
+     * 10min to hour-23 and 10min to hour-0 of the *next* day — never all
+     * 20min dumped into one bucket, which is what previously made single
+     * long sessions look like implausible spikes on the hourly graph.
+     * Only minutes that actually fall inside [startMillis, endMillis] are
+     * counted, so a day can never sum to more than 24h here either.
+     */
+    private fun bucketForegroundTimeByHour(
+        manager: UsageStatsManager,
+        startMillis: Long,
+        endMillis: Long,
+        zone: ZoneId
+    ): List<Long> {
+        val buckets = LongArray(24)
+        val openedAt = mutableMapOf<String, Long>()
+        val closedSincePause = mutableSetOf<String>()
+        val events = manager.queryEvents(startMillis, endMillis)
+        val event = UsageEvents.Event()
+
+        fun creditInterval(from: Long, to: Long) {
+            var cursor = from
+            while (cursor < to) {
+                val hour = java.time.Instant.ofEpochMilli(cursor).atZone(zone).hour
+                val hourEndMillis = java.time.Instant.ofEpochMilli(cursor).atZone(zone)
+                    .withMinute(0).withSecond(0).withNano(0)
+                    .plusHours(1).toInstant().toEpochMilli()
+                val segmentEnd = minOf(to, hourEndMillis)
+                buckets[hour] += (segmentEnd - cursor).coerceAtLeast(0L)
+                cursor = segmentEnd
+            }
+        }
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val pkg = event.packageName ?: continue
+            val isResume = event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
+                (android.os.Build.VERSION.SDK_INT >= 29 && event.eventType == UsageEvents.Event.ACTIVITY_RESUMED)
+            val isPause = event.eventType == UsageEvents.Event.MOVE_TO_BACKGROUND ||
+                (android.os.Build.VERSION.SDK_INT >= 29 && event.eventType == UsageEvents.Event.ACTIVITY_PAUSED)
+
+            when {
+                isResume -> {
+                    if (!openedAt.containsKey(pkg)) openedAt[pkg] = event.timeStamp
+                    closedSincePause.remove(pkg)
+                }
+                isPause -> {
+                    if (pkg !in closedSincePause) {
+                        val start = openedAt.remove(pkg) ?: startMillis
+                        val clippedStart = start.coerceIn(startMillis, endMillis)
+                        val clippedEnd = event.timeStamp.coerceIn(startMillis, endMillis)
+                        if (clippedEnd > clippedStart) creditInterval(clippedStart, clippedEnd)
+                        closedSincePause.add(pkg)
+                    }
+                }
+            }
+        }
+        openedAt.values.forEach { start ->
+            val clippedStart = start.coerceIn(startMillis, endMillis)
+            if (endMillis > clippedStart) creditInterval(clippedStart, endMillis)
+        }
+        return buckets.toList()
     }
 
     /** App label + icon, filtering out apps we shouldn't surface (our own launcher-invisible system deps, etc.). Returns null to skip. */
