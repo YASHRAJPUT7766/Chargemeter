@@ -95,6 +95,7 @@ import com.yash.chargemeterpro.ui.theme.WarningAmber
 fun HomeScreen(
     onNavigateToLiveMonitor: () -> Unit,
     onNavigateToSpeedTest: () -> Unit,
+    onNavigateToCheckup: () -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     liveState: LiveBatteryStateViewModel = hiltViewModel(),
@@ -104,24 +105,28 @@ fun HomeScreen(
     val timeEstimate by liveState.timeEstimate.collectAsStateWithLifecycle()
     val chargingSpeed by liveState.chargingSpeed.collectAsStateWithLifecycle()
     val sessionCount by homeViewModel.completedSessionCount.collectAsStateWithLifecycle()
+    val chargesToday by homeViewModel.chargesToday.collectAsStateWithLifecycle()
+    val dischargeMinutesRemaining by homeViewModel.dischargeMinutesRemaining.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { BatteryHeroCard(snapshot = snapshot) }
-
-        item { StatsGridCard(snapshot = snapshot) }
+        item { BatteryHeroCard(snapshot = snapshot, chargesToday = chargesToday) }
 
         item {
             SpeedAndTimeCard(
                 snapshot = snapshot,
                 chargingSpeed = chargingSpeed,
-                timeEstimate = timeEstimate
+                timeEstimate = timeEstimate,
+                dischargeMinutesRemaining = dischargeMinutesRemaining
             )
         }
 
+        item { StatsGridCard(snapshot = snapshot) }
+
+        item { BatteryCheckupPromoCard(onOpenCheckup = onNavigateToCheckup) }
         item { LiveMonitorPromoCard(onOpenLiveMonitor = onNavigateToLiveMonitor) }
 
         item {
@@ -169,7 +174,7 @@ fun HomeScreen(
 // ---------------------------------------------------------------------
 
 @Composable
-private fun BatteryHeroCard(snapshot: BatterySnapshot?) {
+private fun BatteryHeroCard(snapshot: BatterySnapshot?, chargesToday: Int) {
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -193,6 +198,21 @@ private fun BatteryHeroCard(snapshot: BatterySnapshot?) {
                     )
                 }
                 Text("Battery Level", style = MaterialTheme.typography.bodyMedium, color = PanelGray)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.Bolt,
+                        contentDescription = null,
+                        tint = PhosphorGreenDim,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Charged $chargesToday time${if (chargesToday == 1) "" else "s"} today",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = PanelGrayDim
+                    )
+                }
             }
 
             BatteryGlowIllustration(
@@ -423,7 +443,8 @@ private const val TEMPERATURE_RING_MAX_SCALE = 50f
 private fun SpeedAndTimeCard(
     snapshot: BatterySnapshot?,
     chargingSpeed: ChargingSpeed,
-    timeEstimate: ChargeTimeEstimator.TimeEstimate
+    timeEstimate: ChargeTimeEstimator.TimeEstimate,
+    dischargeMinutesRemaining: Long?
 ) {
     val isCharging = snapshot?.isCharging == true
     val powerWatts = snapshot?.let { PowerCalculator.batteryInputPowerWatts(it) }
@@ -470,12 +491,20 @@ private fun SpeedAndTimeCard(
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = if (isCharging) HomeFormatters.minutesToReadable(timeEstimate.minutesRemainingToFull) else "--",
+                    text = when {
+                        isCharging -> HomeFormatters.minutesToReadable(timeEstimate.minutesRemainingToFull)
+                        dischargeMinutesRemaining != null -> HomeFormatters.minutesToReadable(dischargeMinutesRemaining)
+                        else -> "Calculating…"
+                    },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (isCharging) "until full" else "--",
+                    text = when {
+                        isCharging -> "until full"
+                        dischargeMinutesRemaining != null -> "left on battery"
+                        else -> "collecting usage data"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = PanelGray
                 )
@@ -497,6 +526,52 @@ private fun MiniTrendLine(values: List<Float>, color: Color) {
         height = 36.dp,
         showMinMax = false
     )
+}
+
+// ---------------------------------------------------------------------
+// Battery Checkup promo — separate card, directly below the
+// watt/voltage/current/temperature grid (StatsGridCard).
+// ---------------------------------------------------------------------
+
+@Composable
+private fun BatteryCheckupPromoCard(onOpenCheckup: () -> Unit) {
+    InstrumentCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(WarningAmber.copy(alpha = 0.12f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Speed, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(26.dp))
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Battery Checkup",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = WarningAmber
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "A 2-3 minute scan of your battery settings, with a score out of 100 and what to fix",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PanelGray
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = onOpenCheckup,
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = ButtonDefaults.buttonColors(containerColor = WarningAmber, contentColor = Color.Black)
+                ) {
+                    Text("Run Checkup", fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------
