@@ -29,6 +29,7 @@ val Hairline = Color(0xFF22303C)               // 1px bezel borders instead of s
 val PhosphorGreen = Color(0xFF39FF88)          // Primary reading color — power / wattage
 val PhosphorGreenDim = Color(0xFF1F8F52)       // Secondary/inactive power state
 val VoltageBlue = Color(0xFF5B8DEF)            // Voltage readings
+val VoltageBlueDim = Color(0xFF3A5B99)         // Secondary/inactive voltage state (same darkening ratio as PhosphorGreenDim)
 val WarningAmber = Color(0xFFFF6B4A)           // Current readings, thermal, general warnings
 val CriticalRed = Color(0xFFFF4757)            // Critical battery, danger states
 
