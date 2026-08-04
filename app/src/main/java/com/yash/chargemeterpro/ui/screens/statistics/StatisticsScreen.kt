@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +52,7 @@ import com.yash.chargemeterpro.ui.theme.WarningAmber
 @Composable
 fun StatisticsScreen(
     onNavigateToBatteryHealth: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
     viewModel: StatisticsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,7 +66,33 @@ fun StatisticsScreen(
         item { AllTimeCard(state) }
         item { DrainRateCard(state) }
         item { BatteryHealthEntryCard(onClick = onNavigateToBatteryHealth) }
+        item { HistoryEntryCard(onClick = onNavigateToHistory) }
         item { DisclaimerText(text = PowerTerminology.WATTAGE_ESTIMATE_DISCLAIMER) }
+    }
+}
+
+/**
+ * History shortcut on Stats (spec item #5: "add a History shortcut on
+ * relevant pages such as the Stats page"), matching the visual style of
+ * BatteryHealthEntryCard right above it.
+ */
+@Composable
+private fun HistoryEntryCard(onClick: () -> Unit) {
+    InstrumentCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Filled.History, contentDescription = null, tint = VoltageBlue)
+                Column {
+                    Text("Charging History", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    Text("View all past charging sessions", style = MaterialTheme.typography.labelSmall, color = PanelGray)
+                }
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = PanelGray)
+        }
     }
 }
 
