@@ -5,7 +5,6 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Process
 import android.provider.Settings
@@ -116,7 +115,6 @@ class UsageStatsRepository @Inject constructor(
             .filter { it.value > 0L }
             .mapNotNull { (pkg, timeMillis) ->
                 val info = resolveAppInfo(pkg) ?: return@mapNotNull null
-                val fraction = if (totalForegroundMillis > 0) timeMillis.toFloat() / totalForegroundMillis else 0f
                 AppUsageInfo(
                     packageName = pkg,
                     appName = info.first,
@@ -124,17 +122,32 @@ class UsageStatsRepository @Inject constructor(
                     foregroundTimeMillis = timeMillis,
                     lastTimeUsedMillis = lastUsedByPackage[pkg] ?: 0L,
                     launchCount = launchCountByPackage[pkg] ?: 0,
-                    usageFraction = fraction,
-                    batteryPercent = batteryDropPercent?.let { it * fraction }
+                    usageFraction = 0f, // placeholder, recomputed below against the *visible* total
+                    batteryPercent = null // placeholder, recomputed below against the *visible* total
                 )
             }
             .sortedByDescending { it.foregroundTimeMillis }
 
+        // Recompute fraction/battery-share against the sum of only the apps
+        // actually shown, not the pre-filter total — otherwise a handful of
+        // headless packages (still legitimately hidden, e.g. "android"
+        // itself in rare edge cases) would make every visible app's % and
+        // the visible list's own total look like they don't add up, even
+        // though each individual app's raw minutes were always correct.
+        val visibleTotalMillis = apps.sumOf { it.foregroundTimeMillis }
+        val appsWithShares = apps.map { app ->
+            val fraction = if (visibleTotalMillis > 0) app.foregroundTimeMillis.toFloat() / visibleTotalMillis else 0f
+            app.copy(
+                usageFraction = fraction,
+                batteryPercent = batteryDropPercent?.let { it * fraction }
+            )
+        }
+
         DailyUsageSummary(
             dateEpochDay = dateEpochDay,
-            totalForegroundTimeMillis = totalForegroundMillis,
-            appCount = apps.size,
-            apps = apps,
+            totalForegroundTimeMillis = visibleTotalMillis,
+            appCount = appsWithShares.size,
+            apps = appsWithShares,
             batteryDropPercent = batteryDropPercent?.let { Math.round(it) },
             unlockCount = unlockCount,
             hourlyBuckets = hourlyBuckets
@@ -348,22 +361,55 @@ class UsageStatsRepository @Inject constructor(
         return buckets.toList()
     }
 
-    /** App label + icon, filtering out apps we shouldn't surface (our own launcher-invisible system deps, etc.). Returns null to skip. */
+    /**
+     * App label + icon, filtering out only genuine background-only
+     * components (no launcher entry AND a pure system component) —
+     * never anything the user could actually have opened.
+     *
+     * Previous bug: this filtered out ANY app with FLAG_SYSTEM set that
+     * lacked a launcher intent, on the assumption that meant "internal
+     * service, not a real app". That assumption is wrong on real
+     * devices: OEMs ship many apps users genuinely open — updated system
+     * apps (Chrome, Gmail, Maps once updated via Play Store keep
+     * FLAG_SYSTEM from their factory install), OEM camera/gallery/dialer
+     * apps, carrier apps — all flagged FLAG_SYSTEM despite having a
+     * completely normal launcher entry and real usage. On some OEM
+     * skins getLaunchIntentForPackage() also unreliably returns null for
+     * apps that *do* have a launcher icon (aliased/dynamic launcher
+     * activities), which silently dropped those apps too along with
+     * their entire foreground time — explaining "usage total doesn't
+     * match sum of visible apps".
+     *
+     * Correct rule: we only ever reach this function for a package that
+     * UsageStatsManager already reported real foreground time for — the
+     * user visibly used it. So the only apps worth hiding here are ones
+     * whose CATEGORY_LAUNCHER component genuinely doesn't exist ANYWHERE
+     * in the package (checked directly via queryIntentActivities against
+     * this specific package, not the single default-launcher lookup) —
+     * i.e. truly headless system/service packages that could not have
+     * been opened by a tap. Everything else — the fact that
+     * UsageStatsManager saw it in the foreground at all — is proof
+     * enough that it belongs on the list.
+     */
     private fun resolveAppInfo(packageName: String): Pair<String, android.graphics.drawable.Drawable?>? {
         return try {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
-            // Skip apps with no launcher entry (pure system services) EXCEPT
-            // this app itself and common system UI, which users do
-            // sometimes want visibility into (e.g. "System UI" screen time).
-            val isSystemNoLaunch = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0 &&
-                packageManager.getLaunchIntentForPackage(packageName) == null &&
-                packageName != "android" &&
-                packageName != context.packageName
-            if (isSystemNoLaunch) return null
+
+            val hasAnyLauncherActivity = packageManager.queryIntentActivities(
+                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(packageName),
+                0
+            ).isNotEmpty()
+
+            val isKnownHeadlessException = packageName == "android" || packageName == context.packageName
+            if (!hasAnyLauncherActivity && !isKnownHeadlessException) return null
+
             val label = packageManager.getApplicationLabel(appInfo).toString()
             val icon = try { packageManager.getApplicationIcon(appInfo) } catch (_: Exception) { null }
             label to icon
         } catch (_: PackageManager.NameNotFoundException) {
+            // Package was uninstalled after the usage event was recorded —
+            // genuinely can't be shown (no icon/label source left), not a
+            // filtering decision.
             null
         }
     }
