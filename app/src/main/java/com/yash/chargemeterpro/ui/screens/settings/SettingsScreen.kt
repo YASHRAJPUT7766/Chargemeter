@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
@@ -50,6 +51,7 @@ import com.yash.chargemeterpro.ui.theme.WarningAmber
 fun SettingsScreen(
     onNavigateToAbout: () -> Unit,
     onNavigateToPrivacyPolicy: () -> Unit,
+    onNavigateToHistory: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -72,6 +74,7 @@ fun SettingsScreen(
             Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
         item { AppearanceSection(viewModel) }
+        item { HistorySection(onNavigateToHistory) }
         item { AlertsSection(viewModel) }
         item { ThresholdsSection(viewModel) }
         item { MonitoringSection(viewModel) }
@@ -131,6 +134,21 @@ private fun AppearanceSection(vm: SettingsViewModel) {
                     onCheckedChange = vm::setUseDynamicColor
                 )
             }
+        }
+    }
+}
+
+/**
+ * History moved here from the bottom nav bar (spec item #5) — full
+ * charging history is reached from Settings, in addition to the
+ * shortcut cards on Home and Stats.
+ */
+@Composable
+private fun HistorySection(onNavigateToHistory: () -> Unit) {
+    Column {
+        SectionHeader("History", Icons.Filled.History, PhosphorGreen)
+        InstrumentCard(modifier = Modifier.fillMaxWidth()) {
+            NavRow(title = "Charging History", onClick = onNavigateToHistory)
         }
     }
 }
