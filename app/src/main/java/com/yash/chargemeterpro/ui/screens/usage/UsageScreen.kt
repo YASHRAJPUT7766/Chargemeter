@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -48,6 +49,7 @@ import com.yash.chargemeterpro.data.usage.AppUsageInfo
 import com.yash.chargemeterpro.data.usage.UsagePermissionState
 import com.yash.chargemeterpro.ui.components.InstrumentCard
 import com.yash.chargemeterpro.ui.components.RingMeter
+import com.yash.chargemeterpro.ui.components.SparklineGraph
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PanelGrayDim
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
@@ -202,8 +204,20 @@ private fun UsageContent(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item { UsageDonutCard(totalMillis = summary?.totalForegroundTimeMillis ?: 0L, isLoading = isLoading) }
-                item { UsageStatsRow(appCount = summary?.appCount ?: 0, batteryDrop = summary?.batteryDropPercent) }
+                item {
+                    UsageDonutCard(
+                        totalMillis = summary?.totalForegroundTimeMillis ?: 0L,
+                        hourlyBuckets = summary?.hourlyBuckets ?: List(24) { 0L },
+                        isLoading = isLoading
+                    )
+                }
+                item {
+                    UsageStatsRow(
+                        appCount = summary?.appCount ?: 0,
+                        batteryDrop = summary?.batteryDropPercent,
+                        unlockCount = summary?.unlockCount
+                    )
+                }
                 if (!isLoading && summary != null && summary.apps.isEmpty()) {
                     item { EmptyUsageCard() }
                 }
@@ -256,55 +270,82 @@ private fun DaySelectorRow(
 }
 
 @Composable
-private fun UsageDonutCard(totalMillis: Long, isLoading: Boolean) {
+private fun UsageDonutCard(totalMillis: Long, hourlyBuckets: List<Long>, isLoading: Boolean) {
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = if (totalMillis == 0L && !isLoading) "No usage recorded" else "Total screen time",
-                style = MaterialTheme.typography.labelLarge,
-                color = PanelGray
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            if (isLoading) {
-                Box(modifier = Modifier.size(180.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = PhosphorGreen)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (totalMillis == 0L && !isLoading) "No usage recorded" else "Total screen time",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = PanelGray
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    if (!isLoading) {
+                        Text(
+                            formatDuration(totalMillis),
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = PhosphorGreen
+                        )
+                    }
                 }
-            } else {
-                val fraction = (totalMillis.toFloat() / (8 * 60 * 60 * 1000f)).coerceIn(0.02f, 1f) // 8h reference ceiling, matches how RingMeter is used elsewhere (typical-range, not a hard max)
-                RingMeter(
-                    fraction = fraction,
-                    value = formatDuration(totalMillis),
-                    unit = null,
+                if (isLoading) {
+                    Box(modifier = Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = PhosphorGreen)
+                    }
+                } else {
+                    // 8h reference ceiling — a typical-range visual cue, not a hard max.
+                    val fraction = (totalMillis.toFloat() / (8 * 60 * 60 * 1000f)).coerceIn(0.02f, 1f)
+                    RingMeter(
+                        fraction = fraction,
+                        value = "",
+                        unit = null,
+                        color = PhosphorGreen,
+                        size = 96.dp,
+                        strokeWidth = 12.dp
+                    )
+                }
+            }
+
+            if (!isLoading) {
+                Spacer(modifier = Modifier.height(20.dp))
+                val hourlyMinutes = hourlyBuckets.map { it / 60000f }
+                SparklineGraph(
+                    values = hourlyMinutes,
                     color = PhosphorGreen,
-                    size = 180.dp,
-                    strokeWidth = 16.dp
+                    height = 90.dp,
+                    showMinMax = false
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("12 AM", style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
+                    Text("6 AM", style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
+                    Text("12 PM", style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
+                    Text("6 PM", style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
+                    Text("Now", style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun UsageStatsRow(appCount: Int, batteryDrop: Int?) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        InstrumentCard(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp)) {
-            Column {
-                Text("Apps used", style = MaterialTheme.typography.labelMedium, color = PanelGray)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("$appCount", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = VoltageBlue)
-            }
-        }
-        InstrumentCard(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp)) {
-            Column {
-                Text("Battery used", style = MaterialTheme.typography.labelMedium, color = PanelGray)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    batteryDrop?.let { "$it%" } ?: "—",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = WarningAmber
-                )
-            }
+private fun UsageStatsRow(appCount: Int, batteryDrop: Int?, unlockCount: Int?) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        StatCard(modifier = Modifier.weight(1f), label = "Apps used", value = "$appCount", color = VoltageBlue)
+        StatCard(modifier = Modifier.weight(1f), label = "Battery used", value = batteryDrop?.let { "$it%" } ?: "—", color = WarningAmber)
+        StatCard(modifier = Modifier.weight(1f), label = "Unlocks", value = unlockCount?.toString() ?: "—", color = PhosphorGreen)
+    }
+}
+
+@Composable
+private fun StatCard(modifier: Modifier = Modifier, label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+    InstrumentCard(modifier = modifier, contentPadding = PaddingValues(14.dp)) {
+        Column {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = PanelGray, maxLines = 1)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
         }
     }
 }
