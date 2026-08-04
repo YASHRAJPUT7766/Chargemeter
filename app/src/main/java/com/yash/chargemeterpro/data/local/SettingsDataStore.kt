@@ -65,6 +65,18 @@ class SettingsDataStore @Inject constructor(
         val CAPACITY_BASELINE_SET_AT = longPreferencesKey("capacity_baseline_set_at")
 
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
+
+        // Internal state (not user-facing settings): whether the
+        // Critical Low Battery alert has already fired for the battery's
+        // *current* stay below threshold, so DrainMonitorWorker (a fresh
+        // process each ~15min run, with no in-memory state of its own)
+        // doesn't re-notify on every single run for as long as the phone
+        // remains low. Reset back to false the moment a sample shows the
+        // battery back above threshold, so a later low period alerts
+        // again — mirrors the once-per-episode behavior
+        // ChargingMonitorService already uses for charging milestones,
+        // just persisted since this needs to survive across worker runs.
+        val CRITICAL_LOW_ALERT_FIRED_FOR_EPISODE = booleanPreferencesKey("critical_low_alert_fired_for_episode")
     }
 
     val themeMode: Flow<String> = context.dataStore.data.map { it[Keys.THEME_MODE] ?: "dark" }
@@ -113,6 +125,11 @@ class SettingsDataStore @Inject constructor(
     val alertCriticalLow: Flow<Boolean> = boolPref(Keys.ALERT_CRITICAL_LOW, true)
     suspend fun setAlertCriticalLow(enabled: Boolean) =
         context.dataStore.edit { it[Keys.ALERT_CRITICAL_LOW] = enabled }
+
+    // Internal state for DrainMonitorWorker — see Keys.CRITICAL_LOW_ALERT_FIRED_FOR_EPISODE.
+    val criticalLowAlertFiredForEpisode: Flow<Boolean> = boolPref(Keys.CRITICAL_LOW_ALERT_FIRED_FOR_EPISODE, false)
+    suspend fun setCriticalLowAlertFiredForEpisode(fired: Boolean) =
+        context.dataStore.edit { it[Keys.CRITICAL_LOW_ALERT_FIRED_FOR_EPISODE] = fired }
 
     // --- Thresholds ---
     val highTempThresholdC: Flow<Float> = context.dataStore.data.map { it[Keys.THRESHOLD_HIGH_TEMP_C] ?: 45f }
