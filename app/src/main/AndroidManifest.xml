@@ -46,6 +46,23 @@
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- REQUIRED for the Usage screen's resolveAppInfo() to correctly detect
+         whether a THIRD-PARTY package has a launcher activity. On Android 11+
+         (API 30+), queryIntentActivities() against another app's package is
+         subject to package-visibility restrictions: without declaring what
+         we query for here, the system silently returns an EMPTY result for
+         any non-system package, even when it genuinely has a launcher icon.
+         Preinstalled/system apps stay visible regardless (they're part of
+         the OS), which is exactly why, without this block, only preinstalled
+         apps showed up on the Usage screen and every Play-Store-installed
+         app was incorrectly treated as "no launcher activity" and hidden. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <!-- Exact alarms are NOT used. Widget refresh uses WorkManager's periodic work
          (min 15 min interval per Android platform limits) and the foreground
          service uses its own coroutine loop while active — no SCHEDULE_EXACT_ALARM
