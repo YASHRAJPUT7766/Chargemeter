@@ -49,6 +49,7 @@ import com.yash.chargemeterpro.ui.LiveBatteryStateViewModel
 import com.yash.chargemeterpro.ui.components.ChargeFlowTopBar
 import com.yash.chargemeterpro.ui.screens.about.AboutScreen
 import com.yash.chargemeterpro.ui.screens.about.PrivacyPolicyScreen
+import com.yash.chargemeterpro.ui.screens.appdetail.AppDetailScreen
 import com.yash.chargemeterpro.ui.screens.batteryhealth.BatteryHealthScreen
 import com.yash.chargemeterpro.ui.screens.history.CompareSessionsScreen
 import com.yash.chargemeterpro.ui.screens.history.HistoryScreen
@@ -60,6 +61,7 @@ import com.yash.chargemeterpro.ui.screens.sessiondetail.SessionDetailScreen
 import com.yash.chargemeterpro.ui.screens.settings.SettingsScreen
 import com.yash.chargemeterpro.ui.screens.speedtest.SpeedTestScreen
 import com.yash.chargemeterpro.ui.screens.statistics.StatisticsScreen
+import com.yash.chargemeterpro.ui.screens.usage.UsageScreen
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
 
@@ -184,13 +186,14 @@ fun ChargeMeterNavHost(
                     onNavigateToLiveMonitor = { navController.navigate(Destination.LiveMonitor.route) },
                     onNavigateToSpeedTest = { navController.navigate(Destination.SpeedTest.route) },
                     onNavigateToHistory = {
-                        navController.navigate(Destination.History.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+                        // History is now a drill-in reached from a shortcut
+                        // (Home card / Stats card / Settings row), not a
+                        // bottom-nav destination — so this is a plain forward
+                        // navigation with a real back stack entry, not the
+                        // popUpTo-to-graph-root + saveState/restoreState
+                        // pattern used for switching between bottom-nav tabs
+                        // below in ChargeMeterBottomBar.
+                        navController.navigate(Destination.History.route)
                     },
                     onNavigateToSettings = {
                         navController.navigate(Destination.Settings.route) {
@@ -213,12 +216,18 @@ fun ChargeMeterNavHost(
                 }
             }
             composable(Destination.History.route) {
-                HistoryScreen(
-                    onOpenSession = { sessionId ->
-                        navController.navigate(Destination.SessionDetail.createRoute(sessionId))
-                    },
-                    onCompareSessions = { navController.navigate(Destination.CompareSessions.route) }
-                )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    ScreenBackTopBar(
+                        title = "Charging History",
+                        onBack = { navController.popBackStack() }
+                    )
+                    HistoryScreen(
+                        onOpenSession = { sessionId ->
+                            navController.navigate(Destination.SessionDetail.createRoute(sessionId))
+                        },
+                        onCompareSessions = { navController.navigate(Destination.CompareSessions.route) }
+                    )
+                }
             }
             composable(Destination.BatteryHealth.route) {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -231,13 +240,30 @@ fun ChargeMeterNavHost(
             }
             composable(Destination.Statistics.route) {
                 StatisticsScreen(
-                    onNavigateToBatteryHealth = { navController.navigate(Destination.BatteryHealth.route) }
+                    onNavigateToBatteryHealth = { navController.navigate(Destination.BatteryHealth.route) },
+                    onNavigateToHistory = { navController.navigate(Destination.History.route) }
                 )
+            }
+            composable(Destination.Usage.route) {
+                UsageScreen(
+                    onOpenApp = { packageName ->
+                        navController.navigate(Destination.AppDetail.createRoute(packageName))
+                    }
+                )
+            }
+            composable(
+                route = Destination.AppDetail.route,
+                arguments = listOf(navArgument(Destination.AppDetail.ARG_PACKAGE_NAME) {
+                    type = androidx.navigation.NavType.StringType
+                })
+            ) {
+                AppDetailScreen(onBack = { navController.popBackStack() })
             }
             composable(Destination.Settings.route) {
                 SettingsScreen(
                     onNavigateToAbout = { navController.navigate(Destination.About.route) },
-                    onNavigateToPrivacyPolicy = { navController.navigate(Destination.PrivacyPolicy.route) }
+                    onNavigateToPrivacyPolicy = { navController.navigate(Destination.PrivacyPolicy.route) },
+                    onNavigateToHistory = { navController.navigate(Destination.History.route) }
                 )
             }
             composable(Destination.SpeedTest.route) {
