@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yash.chargemeterpro.domain.model.AvailableOr
 import com.yash.chargemeterpro.domain.model.BatterySnapshot
 import com.yash.chargemeterpro.domain.model.ChargingStatus
 import com.yash.chargemeterpro.domain.usecase.ChargeTimeEstimator
@@ -53,16 +54,18 @@ import com.yash.chargemeterpro.domain.usecase.ChargingSpeed
 import com.yash.chargemeterpro.domain.usecase.PowerCalculator
 import com.yash.chargemeterpro.domain.usecase.PowerTerminology
 import com.yash.chargemeterpro.ui.LiveBatteryStateViewModel
+import com.yash.chargemeterpro.ui.components.CompactMeterGauge
 import com.yash.chargemeterpro.ui.components.InstrumentCard
 import com.yash.chargemeterpro.ui.components.RingMeter
 import com.yash.chargemeterpro.ui.components.SparklineGraph
-import com.yash.chargemeterpro.ui.components.WattMeterGauge
 import com.yash.chargemeterpro.ui.theme.GraphBatteryPct
 import com.yash.chargemeterpro.ui.theme.Hairline
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PanelGrayDim
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
+import com.yash.chargemeterpro.ui.theme.PhosphorGreenDim
 import com.yash.chargemeterpro.ui.theme.VoltageBlue
+import com.yash.chargemeterpro.ui.theme.VoltageBlueDim
 import com.yash.chargemeterpro.ui.theme.WarningAmber
 
 /**
@@ -311,29 +314,47 @@ private fun StatsGridCard(snapshot: BatterySnapshot?) {
     val voltage = snapshot?.voltageVolts
     val currentMa = snapshot?.currentMilliAmpsNormalized
     val tempC = snapshot?.temperatureC
+    val batteryPercent = snapshot?.batteryPercent
+    val chargeCounterMah = (snapshot?.chargeCounterMicroAh as? AvailableOr.Value)
+        ?.value?.let { it / 1000.0 }
 
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
             Text("CHARGING POWER", style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Big analog-style speedometer — tick marks + sweep-gradient
-            // arc + large center wattage reading. This is the same
-            // WattMeterGauge used elsewhere in the app (Live Monitor /
-            // Speed Test), reused here as the Home screen's hero
-            // instrument so the Watt reading actually looks like a meter.
-            WattMeterGauge(
-                currentWatts = powerWatts,
-                maxScaleWatts = WATT_RING_MAX_SCALE,
-                modifier = Modifier
-                    .fillMaxWidth(0.72f)
-                    .padding(top = 4.dp)
-            )
+            // Watt gauge (shrunk from full-width hero size) side-by-side
+            // with a Charge Counter gauge of the exact same size — the
+            // fraction here is battery% itself (how much of total
+            // capacity is currently held), with the real measured mAh
+            // reading (BATTERY_PROPERTY_CHARGE_COUNTER) as the center
+            // number, so nothing here is a guessed/fabricated max-scale.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompactMeterGauge(
+                    fraction = if (powerWatts != null) (powerWatts / WATT_RING_MAX_SCALE).toFloat() else 0f,
+                    centerValue = powerWatts?.let { "%.1f".format(it) } ?: "—",
+                    centerUnit = "WATTS",
+                    gaugeColors = listOf(PhosphorGreenDim, PhosphorGreen, PhosphorGreen),
+                    size = 128.dp
+                )
+                CompactMeterGauge(
+                    fraction = (batteryPercent ?: 0) / 100f,
+                    centerValue = chargeCounterMah?.let { "%.0f".format(it) } ?: "${batteryPercent ?: "—"}",
+                    centerUnit = if (chargeCounterMah != null) "mAh" else "%",
+                    gaugeColors = listOf(VoltageBlueDim, VoltageBlue, VoltageBlue),
+                    size = 128.dp,
+                    subLabel = if (chargeCounterMah != null) "${batteryPercent ?: 0}% of capacity" else null
+                )
+            }
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // Three smaller rings, visibly smaller than the Watt gauge above
+            // Three smaller rings, visibly smaller than the gauges above
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 MiniStatRing(
                     label = "VOLTAGE",
