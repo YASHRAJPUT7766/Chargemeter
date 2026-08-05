@@ -316,7 +316,7 @@ private fun BrandMark(size: Dp) {
 @Composable
 private fun BrandWordmark(fontSize: androidx.compose.ui.unit.TextUnit) {
     Row {
-        Text("Charge", fontSize = fontSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-        Text("Flow", fontSize = fontSize, fontWeight = FontWeight.Bold, color = PhosphorGreen)
+        Text("Battery", fontSize = fontSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(" Stats", fontSize = fontSize, fontWeight = FontWeight.Bold, color = PhosphorGreen)
     }
 }
