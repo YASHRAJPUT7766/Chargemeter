@@ -13,7 +13,7 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.appLimitsDataStore by preferencesDataStore(name = "chargeflow_app_limits")
+private val Context.appLimitsDataStore by preferencesDataStore(name = "battery_stats_app_limits")
 
 /**
  * Per-app daily usage limit ("App Restrictions", spec item #10). Scope

@@ -23,7 +23,7 @@ import javax.inject.Singleton
  * duplicate what UsageStatsManager already tracks into our own Room
  * database — Android itself retains a rolling multi-week history of
  * per-app foreground time, which is both more accurate (it sees every
- * app, including ones opened while ChargeFlow wasn't running at all)
+ * app, including ones opened while Battery Stats wasn't running at all)
  * and avoids us maintaining a second, inevitably-drifting copy of the
  * same data. We cap what we expose to 15 days per the spec even though
  * the OS often retains more.
