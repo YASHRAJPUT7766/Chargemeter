@@ -221,12 +221,15 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, viewModel: SessionD
             if (state.samples.size >= 2) {
                 item {
                     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
+                        val withPower = state.samples.filter { it.powerWatts != null }
+                        val timeFormat = remember { java.text.SimpleDateFormat("h:mm:ss a", java.util.Locale.getDefault()) }
                         SparklineGraph(
-                            values = state.samples.mapNotNull { it.powerWatts?.toFloat() },
+                            values = withPower.map { it.powerWatts!!.toFloat() },
                             color = PhosphorGreen,
                             label = "Power Over Session",
                             valueSuffix = " W",
-                            height = 120.dp
+                            height = 120.dp,
+                            pointLabels = withPower.map { timeFormat.format(java.util.Date(it.timestampMillis)) }
                         )
                     }
                 }
