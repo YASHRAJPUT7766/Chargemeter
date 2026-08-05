@@ -33,7 +33,7 @@ import javax.inject.Inject
  * if the app process has no other active exemption at that moment. The
  * mitigation used here is that Settings prompts the user (once, when
  * they enable Smart Charging Alerts or Auto-start Monitoring — see
- * SettingsScreen's battery-optimization card) to exempt ChargeFlow from
+ * SettingsScreen's battery-optimization card) to exempt Battery Stats from
  * battery optimization via REQUEST_IGNORE_BATTERY_OPTIMIZATIONS; apps
  * on that allowlist are treated as exempt from this restriction. The
  * try/catch below also fails safe (logs, doesn't crash) if the OS

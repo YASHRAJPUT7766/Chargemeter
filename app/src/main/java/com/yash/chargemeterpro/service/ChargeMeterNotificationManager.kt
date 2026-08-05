@@ -36,7 +36,7 @@ import javax.inject.Singleton
  * ICON: every notification here uses R.drawable.ic_stat_notify, a
  * proper white-silhouette-on-transparent status bar icon generated
  * from the app's own monochrome launcher layer — never a stock
- * Android system icon — so alerts are recognizable as ChargeFlow's at
+ * Android system icon — so alerts are recognizable as Battery Stats' at
  * a glance in the status bar and shade.
  */
 @Singleton
@@ -287,7 +287,7 @@ class ChargeMeterNotificationManager @Inject constructor(
         if (!canPostNotifications()) return
         val notification = baseBuilder(CHANNEL_MILESTONE)
             .setContentTitle("Unplug now — reached your $percent% limit")
-            .setContentText("ChargeFlow can't stop charging automatically, but you're past your custom limit")
+            .setContentText("Battery Stats can't stop charging automatically, but you're past your custom limit")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .build()
@@ -343,7 +343,7 @@ class ChargeMeterNotificationManager @Inject constructor(
     ): android.app.Notification {
         return NotificationCompat.Builder(context, CHANNEL_MONITOR_SERVICE)
             .setSmallIcon(R.drawable.ic_stat_notify)
-            .setContentTitle("ChargeFlow — Charging Monitor")
+            .setContentTitle("Battery Stats — Charging Monitor")
             .setContentText("$statusText · $batteryPercent% · $wattsText")
             .setContentIntent(contentIntent())
             .setOngoing(true)
