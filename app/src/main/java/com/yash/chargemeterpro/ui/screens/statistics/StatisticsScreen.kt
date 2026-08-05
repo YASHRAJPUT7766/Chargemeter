@@ -239,7 +239,8 @@ private fun DrainRateCard(state: StatisticsUiState) {
                     color = GraphTemperature,
                     label = "Battery % (last 7 days)",
                     valueSuffix = "%",
-                    height = 100.dp
+                    height = 100.dp,
+                    pointLabels = state.batteryPercentHistoryLabels
                 )
             }
         }

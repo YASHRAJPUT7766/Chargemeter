@@ -25,7 +25,9 @@ data class StatisticsUiState(
     val allTimeSessionCount: Int = 0,
     val averageSessionDurationMinutes: Long? = null,
     val drainRate: DrainRateResult = DrainRateResult(null, 0, 0.0),
-    val batteryPercentHistory: List<Float> = emptyList()
+    val batteryPercentHistory: List<Float> = emptyList(),
+    /** Human-readable "day time" caption per point in batteryPercentHistory, for graph scrubbing. */
+    val batteryPercentHistoryLabels: List<String> = emptyList()
 )
 
 @HiltViewModel
@@ -85,9 +87,11 @@ class StatisticsViewModel @Inject constructor(
             val sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000)
             val samples = drainSampleDao.getSince(sevenDaysAgo)
             val rate = DrainRateCalculator.calculate(samples)
+            val labelFormat = java.text.SimpleDateFormat("d MMM, h:mm a", java.util.Locale.getDefault())
             _uiState.value = _uiState.value.copy(
                 drainRate = rate,
-                batteryPercentHistory = samples.map { it.batteryPercent.toFloat() }
+                batteryPercentHistory = samples.map { it.batteryPercent.toFloat() },
+                batteryPercentHistoryLabels = samples.map { labelFormat.format(java.util.Date(it.timestampMillis)) }
             )
         }
     }
