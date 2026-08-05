@@ -204,7 +204,10 @@ private fun UsageHistoryCard(state: AppDetailUiState) {
                     values = state.history.map { (it.foregroundTimeMillis / 60000f) },
                     color = PhosphorGreen,
                     valueSuffix = "m",
-                    showMinMax = true
+                    showMinMax = true,
+                    pointLabels = state.history.map {
+                        LocalDate.ofEpochDay(it.dateEpochDay).format(DateTimeFormatter.ofPattern("d MMM"))
+                    }
                 )
                 if (state.history.size <= 10) {
                     Spacer(modifier = Modifier.height(8.dp))
