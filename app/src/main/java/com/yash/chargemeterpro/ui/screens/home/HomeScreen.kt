@@ -69,7 +69,7 @@ import com.yash.chargemeterpro.ui.theme.VoltageBlueDim
 import com.yash.chargemeterpro.ui.theme.WarningAmber
 
 /**
- * The Home screen — laid out to match the ChargeFlow product screenshot
+ * The Home screen — laid out to match the Battery Stats product screenshot
  * exactly:
  *
  *   [NOT CHARGING]                 (glowing battery jar)
