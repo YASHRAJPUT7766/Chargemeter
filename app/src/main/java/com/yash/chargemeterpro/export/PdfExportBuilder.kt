@@ -91,7 +91,7 @@ object PdfExportBuilder {
      * rather than a ChargingSessionEntity.
      */
     fun buildLiveStatusReport(context: Context, snapshot: com.yash.chargemeterpro.domain.model.BatterySnapshot): File {
-        val file = outputFile(context, "chargeflow_status_${fileTimestampFmt.format(Date())}.pdf")
+        val file = outputFile(context, "battery_stats_status_${fileTimestampFmt.format(Date())}.pdf")
         PdfDocument(PdfWriter(file.absolutePath)).use { pdf ->
             Document(pdf).use { doc ->
                 writeReportHeader(doc, "Charging Status Report")
@@ -166,7 +166,7 @@ object PdfExportBuilder {
     }
 
     private fun writeReportHeader(doc: Document, title: String) {
-        doc.add(Paragraph("ChargeFlow").setFontColor(phosphorGreen).setBold().setFontSize(11f))
+        doc.add(Paragraph("Battery Stats").setFontColor(phosphorGreen).setBold().setFontSize(11f))
         doc.add(Paragraph(title).setBold().setFontSize(20f))
     }
 

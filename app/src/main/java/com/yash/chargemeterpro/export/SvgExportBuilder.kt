@@ -19,7 +19,7 @@ import java.util.Locale
  *
  * Colors deliberately mirror the app's own instrument-panel palette
  * (phosphor green accent on a near-black panel) so a shared SVG still
- * looks recognizably like ChargeFlow rather than a generic light-mode
+ * looks recognizably like Battery Stats rather than a generic light-mode
  * document.
  */
 object SvgExportBuilder {
@@ -61,7 +61,7 @@ object SvgExportBuilder {
         val svg = buildString {
             appendLine("""<svg xmlns="http://www.w3.org/2000/svg" width="$width" height="$height" viewBox="0 0 $width $height">""")
             appendLine("""<rect width="$width" height="$height" fill="#0A0E12"/>""")
-            appendLine("""<text x="24" y="34" font-family="sans-serif" font-size="13" font-weight="bold" fill="#39FF88">ChargeFlow</text>""")
+            appendLine("""<text x="24" y="34" font-family="sans-serif" font-size="13" font-weight="bold" fill="#39FF88">Battery Stats</text>""")
             appendLine("""<text x="24" y="64" font-family="sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF">Charging Status</text>""")
             appendLine(
                 """<text x="24" y="86" font-family="sans-serif" font-size="12" fill="#5A6470">${escapeXml(dateFmt.format(Date(snapshot.timestampMillis)))}</text>"""
@@ -86,7 +86,7 @@ object SvgExportBuilder {
         }
 
         val exportsDir = File(context.cacheDir, "exports").apply { mkdirs() }
-        val file = File(exportsDir, "chargeflow_status_${fileTimestampFmt.format(Date())}.svg")
+        val file = File(exportsDir, "battery_stats_status_${fileTimestampFmt.format(Date())}.svg")
         file.writeText(svg)
         return file
     }
