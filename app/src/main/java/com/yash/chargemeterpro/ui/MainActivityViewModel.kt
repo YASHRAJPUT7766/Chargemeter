@@ -20,7 +20,7 @@ class MainActivityViewModel @Inject constructor(
     }
 
     /**
-     * The top bar's quick theme toggle (see ChargeFlowTopBar) always
+     * The top bar's quick theme toggle (see BatteryStatsTopBar) always
      * lands on an explicit "dark" or "light" — it never sets "system".
      * If the user is currently on "system", the toggle starts from
      * whatever that resolves to right now (passed in as
