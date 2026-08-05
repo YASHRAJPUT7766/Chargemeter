@@ -2,10 +2,12 @@ package com.yash.chargemeterpro.ui.screens.checkup
 
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +22,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
@@ -39,14 +43,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.yash.chargemeterpro.domain.usecase.BatteryCheckupScorer
 import com.yash.chargemeterpro.ui.components.InstrumentCard
 import com.yash.chargemeterpro.ui.components.RingMeter
 import com.yash.chargemeterpro.ui.theme.CriticalRed
 import com.yash.chargemeterpro.ui.theme.Hairline
+import com.yash.chargemeterpro.ui.theme.InstrumentSurface
 import com.yash.chargemeterpro.ui.theme.PanelGray
 import com.yash.chargemeterpro.ui.theme.PanelGrayDim
 import com.yash.chargemeterpro.ui.theme.PhosphorGreen
@@ -89,8 +96,8 @@ fun CheckupScreen(
 private fun ScanningContent(scanning: CheckupStage.Scanning) {
     val infiniteTransition = rememberInfiniteTransition(label = "checkupPulse")
     val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.15f,
+        initialValue = 0.9f,
+        targetValue = 1.06f,
         animationSpec = infiniteRepeatable(
             animation = tween(1100, easing = androidx.compose.animation.core.FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -98,51 +105,118 @@ private fun ScanningContent(scanning: CheckupStage.Scanning) {
         label = "pulseScale"
     )
 
+    // Smoothly interpolate the ring/number toward the target percent
+    // instead of snapping, so even the per-percent steps from the
+    // ViewModel feel like a continuous climb rather than a tick.
+    val animatedPercent by animateFloatAsState(
+        targetValue = scanning.percent.toFloat(),
+        animationSpec = tween(durationMillis = 260, easing = androidx.compose.animation.core.LinearEasing),
+        label = "percentClimb"
+    )
+
+    val listState = rememberLazyListState()
+    LaunchedEffect(scanning.log.size) {
+        if (scanning.log.isNotEmpty()) {
+            listState.animateScrollToItem(scanning.log.size - 1)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(8.dp))
         Box(contentAlignment = Alignment.Center) {
             Box(
                 modifier = Modifier
-                    .size((140 * pulse).dp)
+                    .size((124 * pulse).dp)
                     .background(PhosphorGreen.copy(alpha = 0.10f), CircleShape)
             )
             CircularProgressIndicator(
-                progress = { (scanning.stepIndex + 1) / scanning.totalSteps.toFloat() },
-                modifier = Modifier.size(120.dp),
+                progress = { animatedPercent / 100f },
+                modifier = Modifier.size(104.dp),
                 strokeWidth = 6.dp,
                 color = PhosphorGreen,
                 trackColor = Hairline
             )
             Text(
-                text = "${((scanning.stepIndex + 1) * 100 / scanning.totalSteps)}%",
-                style = MaterialTheme.typography.headlineMedium,
+                text = "${animatedPercent.toInt()}%",
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Running Battery Checkup",
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = scanning.stepLabel,
-            style = MaterialTheme.typography.bodyMedium,
-            color = PanelGray
-        )
         Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = scanning.stepLabel + "…",
+            style = MaterialTheme.typography.bodyMedium,
+            color = PhosphorGreen,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = "Step ${scanning.stepIndex + 1} of ${scanning.totalSteps}",
             style = MaterialTheme.typography.bodySmall,
             color = PanelGrayDim
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Live scrolling process log — mirrors a build/CI console so the
+        // scan reads as genuinely working through real checks rather
+        // than sitting on a blank spinner.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .clip(RoundedCornerShape(10.dp))
+                .background(InstrumentSurface)
+                .border(1.dp, Hairline, RoundedCornerShape(10.dp))
+                .padding(12.dp)
+        ) {
+            LazyColumn(
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                items(scanning.log) { line ->
+                    LogLineRow(line)
+                }
+                item { Spacer(modifier = Modifier.height(2.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LogLineRow(line: LogLine) {
+    val (prefix, color) = when (line.kind) {
+        LogKind.OK -> "✓" to PhosphorGreen
+        LogKind.WARN -> "!" to WarningAmber
+        LogKind.INFO -> "›" to PanelGrayDim
+    }
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = prefix,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+            color = color,
+            modifier = Modifier.width(16.dp)
+        )
+        Text(
+            text = line.text,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+            lineHeight = 15.sp,
+            color = if (line.kind == LogKind.WARN) WarningAmber.copy(alpha = 0.9f) else PanelGray
         )
     }
 }
@@ -161,6 +235,16 @@ private fun ResultContent(
         result.score >= 80 -> PhosphorGreen
         result.score >= 50 -> WarningAmber
         else -> CriticalRed
+    }
+    val checkedCount = result.findings.size
+    val warningCount = result.findings.count { it.severity == BatteryCheckupScorer.Severity.WARNING }
+    val goodCount = result.findings.count { it.severity == BatteryCheckupScorer.Severity.GOOD }
+
+    // Actionable fixes pulled straight from the findings that actually
+    // have a suggestion attached — no invented tips layered on top of
+    // what the scan genuinely found wrong.
+    val actionableFindings = result.findings.filter {
+        it.severity == BatteryCheckupScorer.Severity.WARNING && it.suggestion != null
     }
 
     LazyColumn(
@@ -185,15 +269,37 @@ private fun ResultContent(
                     Text(
                         text = scoreSummary(result.score),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = PanelGray
+                        color = PanelGray,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDividerLine()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        ScanTallyItem(count = checkedCount, label = "Checked", color = PanelGray)
+                        ScanTallyItem(count = goodCount, label = "Good", color = PhosphorGreen)
+                        ScanTallyItem(count = warningCount, label = "Needs attention", color = WarningAmber)
+                    }
                 }
+            }
+        }
+
+        if (actionableFindings.isNotEmpty()) {
+            item {
+                Text(
+                    "Quick wins to save battery",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            items(actionableFindings) { finding ->
+                QuickWinCard(finding)
             }
         }
 
         item {
             Text(
-                "What we found",
+                "Everything we checked",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -255,6 +361,47 @@ private fun scoreSummary(score: Int): String = when {
     score >= 80 -> "Your battery settings are in great shape."
     score >= 50 -> "A few changes could meaningfully improve your battery life."
     else -> "Several settings are working against your battery life right now."
+}
+
+@Composable
+private fun HorizontalDividerLine() {
+    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Hairline))
+}
+
+@Composable
+private fun ScanTallyItem(count: Int, label: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("$count", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = PanelGrayDim)
+    }
+}
+
+/**
+ * A single concrete, tappable-feeling action card built from a real
+ * finding's suggestion — e.g. "Turn on Battery Saver". Distinct from
+ * [FindingCard] below: this section is deliberately just the short list
+ * of things worth doing right now, while "Everything we checked" further
+ * down is the full transparent log of every check (good, info, warning).
+ */
+@Composable
+private fun QuickWinCard(finding: BatteryCheckupScorer.Finding) {
+    InstrumentCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            Icon(Icons.Filled.Warning, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(finding.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    finding.suggestion.orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PhosphorGreen,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
 }
 
 @Composable
