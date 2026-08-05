@@ -46,7 +46,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.yash.chargemeterpro.ui.LiveBatteryStateViewModel
-import com.yash.chargemeterpro.ui.components.ChargeFlowTopBar
+import com.yash.chargemeterpro.ui.components.BatteryStatsTopBar
 import com.yash.chargemeterpro.ui.screens.about.AboutScreen
 import com.yash.chargemeterpro.ui.screens.about.PrivacyPolicyScreen
 import com.yash.chargemeterpro.ui.screens.appdetail.AppDetailScreen
@@ -136,14 +136,14 @@ fun ChargeMeterNavHost(
 
     Scaffold(
         topBar = {
-            // Consistent ChargeFlow logo + name header, plus quick-action
+            // Consistent Battery Stats logo + name header, plus quick-action
             // icons, on every top-level (bottom-nav) screen. Drill-in
             // screens (Live Monitor, Battery Health, Session Detail, etc.)
             // render their own ScreenBackTopBar instead, since those need
             // a back action rather than these shortcuts.
             if (showBottomBar) {
                 Box {
-                    ChargeFlowTopBar(
+                    BatteryStatsTopBar(
                         isDarkTheme = isDarkTheme,
                         onToggleTheme = onToggleTheme,
                         onShare = { showShareMenu = true },
@@ -304,7 +304,7 @@ fun ChargeMeterNavHost(
 }
 
 /**
- * Floating capsule nav bar, matching the ChargeFlow reference: the whole
+ * Floating capsule nav bar, matching the Battery Stats reference: the whole
  * bar sits as one rounded, elevated pill with margin around it (not an
  * edge-to-edge bar with a top divider line), and the active tab gets its
  * own smaller green-tinted pill inside that. Previously this used a
@@ -355,7 +355,7 @@ private fun ChargeMeterBottomBar(navController: NavHostController, currentRoute:
 }
 
 /**
- * A single bottom-nav destination, styled to match the ChargeFlow spec:
+ * A single bottom-nav destination, styled to match the Battery Stats spec:
  * the active tab gets a soft green pill behind its icon+label and both
  * turn phosphor green; inactive tabs stay plain panel-gray. Shown
  * identically on every top-level screen (Home, Stats, History, Settings)
@@ -393,8 +393,8 @@ private fun BottomNavPillItem(
  * (Live Monitor, Battery Health, About, Privacy Policy, Speed Test,
  * Compare Sessions, Session Detail).
  *
- * Also shows the ChargeFlow logo next to the title, matching
- * ChargeFlowTopBar on the top-level screens (Home/Stats/History/
+ * Also shows the Battery Stats logo next to the title, matching
+ * BatteryStatsTopBar on the top-level screens (Home/Stats/History/
  * Settings) — previously this bar only had the back arrow and title, so
  * the brand mark disappeared the moment the user navigated one level
  * deep into the app, which read as inconsistent/unbranded on every

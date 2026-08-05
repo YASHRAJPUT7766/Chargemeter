@@ -17,7 +17,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
- * Backs the top bar's Share action (see ChargeFlowTopBar): builds a
+ * Backs the top bar's Share action (see BatteryStatsTopBar): builds a
  * report of the CURRENT live battery/charging snapshot — as opposed to
  * SessionDetailViewModel's share, which reports on one already-completed,
  * saved session. Offers both PDF and SVG, per spec, and reuses the same
