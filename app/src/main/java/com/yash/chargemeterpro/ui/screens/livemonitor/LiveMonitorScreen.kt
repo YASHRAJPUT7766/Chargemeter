@@ -47,7 +47,7 @@ import com.yash.chargemeterpro.ui.theme.VoltageBlue
 
 /**
  * Live Monitor redesign: the old line-chart-per-metric graph is gone —
- * ChargeFlow's spec explicitly rules out traditional line charts
+ * Battery Stats' spec explicitly rules out traditional line charts
  * anywhere in the app. In its place: a focused hero ring for whichever
  * metric is selected (reusing the same metric-switcher chips the graph
  * used to sit under) plus a small trend arrow computed from the same
