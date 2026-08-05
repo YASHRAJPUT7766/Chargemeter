@@ -13,6 +13,7 @@ import com.yash.chargemeterpro.ui.components.NotificationPermissionRequester
 import com.yash.chargemeterpro.ui.navigation.ChargeMeterNavHost
 import com.yash.chargemeterpro.ui.theme.ChargeMeterProTheme
 import com.yash.chargemeterpro.util.DrainMonitorWorkScheduler
+import com.yash.chargemeterpro.util.UsageWidgetWorkScheduler
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.yash.chargemeterpro.util.UsageWidgetUpdateWorker
