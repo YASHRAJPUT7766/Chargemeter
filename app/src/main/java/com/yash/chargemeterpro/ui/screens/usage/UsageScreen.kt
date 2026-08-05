@@ -314,7 +314,16 @@ private fun UsageDonutCard(totalMillis: Long, hourlyBuckets: List<Long>, isLoadi
                     values = hourlyMinutes,
                     color = PhosphorGreen,
                     height = 90.dp,
-                    showMinMax = false
+                    showMinMax = false,
+                    valueSuffix = "m",
+                    pointLabels = (0..23).map { hour ->
+                        when {
+                            hour == 0 -> "12 AM"
+                            hour < 12 -> "$hour AM"
+                            hour == 12 -> "12 PM"
+                            else -> "${hour - 12} PM"
+                        }
+                    }
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
