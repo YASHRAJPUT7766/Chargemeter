@@ -524,7 +524,8 @@ private fun MiniTrendLine(values: List<Float>, color: Color) {
         values = values,
         color = color,
         height = 36.dp,
-        showMinMax = false
+        showMinMax = false,
+        scrubEnabled = false
     )
 }
 
