@@ -90,7 +90,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.ChargeFlow.Splash"
+            android:theme="@style/Theme.BatteryStats.Splash"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
             android:launchMode="singleTop">
             <intent-filter>
