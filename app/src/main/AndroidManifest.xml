@@ -163,6 +163,42 @@
                 android:resource="@xml/charge_meter_widget_info" />
         </receiver>
 
+        <!-- Home screen widget: time remaining (to full / backup left) + charging speed. -->
+        <receiver
+            android:name=".widget.TimeRemainingWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/time_remaining_widget_info" />
+        </receiver>
+
+        <!-- Home screen widget: compact battery % + watts tile. -->
+        <receiver
+            android:name=".widget.CompactStatsWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/compact_stats_widget_info" />
+        </receiver>
+
+        <!-- Home screen widget: today's screen time, top app, unlock count. -->
+        <receiver
+            android:name=".widget.UsageWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/usage_widget_info" />
+        </receiver>
+
         <!-- FileProvider for sharing exported CSV/PDF reports without granting
              broad storage access. -->
         <provider
