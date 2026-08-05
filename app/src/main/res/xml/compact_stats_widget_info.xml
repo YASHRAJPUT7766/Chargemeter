@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Smallest of the four widgets — a 1x1-friendly tile. Reuses the same
+    state ChargeMeterWidget is pushed (see WidgetKeys in
+    ChargeMeterWidget.kt), so no separate updatePeriodMillis story is
+    needed here either — it updates whenever ChargeMeterWidget does.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="70dp"
+    android:minHeight="70dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:previewImage="@drawable/compact_stats_widget_preview"
+    android:initialLayout="@layout/widget_loading"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/compact_stats_widget_description" />

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Unlike the battery widgets, this one's data doesn't change on a
+    charging-poll cadence, so it DOES rely on a periodic refresh — but
+    via UsageWidgetWorkScheduler's WorkManager job (see that class for
+    why 30 minutes, and why WorkManager rather than
+    android:updatePeriodMillis, which Android silently floors/defers
+    unpredictably in practice). updatePeriodMillis is left at 0 here for
+    the same explicitness reason as the other three widgets.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:previewImage="@drawable/usage_widget_preview"
+    android:initialLayout="@layout/widget_loading"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/usage_widget_description" />
