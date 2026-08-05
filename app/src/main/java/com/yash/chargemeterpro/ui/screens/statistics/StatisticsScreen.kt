@@ -42,7 +42,7 @@ import com.yash.chargemeterpro.ui.theme.WarningAmber
  * Stats page redesign: every number here is expressed through a ring
  * meter, capsule bar, or a big color-coded figure inside a small card —
  * never a bare "Label ......... value" text row and never a line chart,
- * per the ChargeFlow spec. Scales (what fraction=1.0 means for each
+ * per the Battery Stats spec. Scales (what fraction=1.0 means for each
  * ring) are chosen to be typical-range references, not hard maximums —
  * e.g. the power ring reads "full" around 30W, a fast-charge ceiling for
  * most phones, so a normal 10-20W session still shows a satisfying,
