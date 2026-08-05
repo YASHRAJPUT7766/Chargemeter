@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shown in the system's "add widget" picker UI. Small square tile:
+    percent readout centered above a watts readout.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="70dp"
+    android:height="70dp"
+    android:viewportWidth="70"
+    android:viewportHeight="70">
+    <path android:pathData="M0,0h70v70h-70z" android:fillColor="#0A0E12" />
+    <!-- percent placeholder -->
+    <path android:pathData="M15,20h40v20h-40z" android:fillColor="#39FF88" android:fillAlpha="0.2" />
+    <!-- watts placeholder -->
+    <path android:pathData="M20,46h30v10h-30z" android:fillColor="#8B98A5" android:fillAlpha="0.2" />
+</vector>

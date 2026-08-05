@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shown in the system's "add widget" picker UI. Static approximation:
+    big time readout + small speed-label chip, on the instrument-panel
+    background.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="140dp"
+    android:height="90dp"
+    android:viewportWidth="140"
+    android:viewportHeight="90">
+    <path android:pathData="M0,0h140v90h-140z" android:fillColor="#0A0E12" />
+    <!-- time readout placeholder -->
+    <path android:pathData="M12,18h70v22h-70z" android:fillColor="#39FF88" android:fillAlpha="0.2" />
+    <!-- sublabel placeholder -->
+    <path android:pathData="M12,44h50v8h-50z" android:fillColor="#8B98A5" android:fillAlpha="0.2" />
+    <!-- speed chip placeholder -->
+    <path android:pathData="M12,58h40v14h-40z" android:fillColor="#39FF88" android:fillAlpha="0.15" />
+</vector>

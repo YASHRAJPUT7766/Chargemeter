@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shown in the system's "add widget" picker UI. Static approximation:
+    screen-time readout, "top app" row, unlock-count row.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="180dp"
+    android:height="110dp"
+    android:viewportWidth="180"
+    android:viewportHeight="110">
+    <path android:pathData="M0,0h180v110h-180z" android:fillColor="#0A0E12" />
+    <!-- screen time placeholder -->
+    <path android:pathData="M12,18h80v20h-80z" android:fillColor="#39FF88" android:fillAlpha="0.2" />
+    <!-- top app row placeholder -->
+    <path android:pathData="M12,50h120v12h-120z" android:fillColor="#5B8DEF" android:fillAlpha="0.2" />
+    <!-- unlocks row placeholder -->
+    <path android:pathData="M12,70h60v8h-60z" android:fillColor="#8B98A5" android:fillAlpha="0.2" />
+</vector>
