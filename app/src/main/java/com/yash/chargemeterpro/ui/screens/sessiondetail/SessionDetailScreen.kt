@@ -59,7 +59,7 @@ import java.util.Locale
 /**
  * A completed session's summary — redesigned around rings/capsule bars
  * instead of a plotted "wattage over time" line chart, per the
- * ChargeFlow spec's no-line-charts rule. The underlying per-sample data
+ * Battery Stats spec's no-line-charts rule. The underlying per-sample data
  * (state.samples) is still collected and still exportable via CSV/PDF —
  * nothing about session recording was removed, just how the power
  * range is *visualized* on this screen: as a min/avg/max comparison
