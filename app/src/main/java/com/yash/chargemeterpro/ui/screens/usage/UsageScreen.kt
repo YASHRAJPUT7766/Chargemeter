@@ -135,7 +135,7 @@ private fun UsagePermissionGate(onGrantClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(10.dp))
         Text(
-            "ChargeFlow needs Usage Access permission to show your daily screen time and app-by-app breakdown. " +
+            "Battery Stats needs Usage Access permission to show your daily screen time and app-by-app breakdown. " +
                 "This is a system permission — grant it on the next screen, then come back here.",
             style = MaterialTheme.typography.bodyMedium,
             color = PanelGray,
