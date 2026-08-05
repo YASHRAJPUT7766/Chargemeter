@@ -92,6 +92,15 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
+    applicationVariants.all {
+        val variant = this
+        variant.outputs
+            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
+            .forEach { output ->
+                output.outputFileName = "batterystats.apk"
+            }
+    }
 }
 
 dependencies {
@@ -136,7 +145,7 @@ dependencies {
     implementation("androidx.glance:glance-material3:1.1.1")
 
     // --- Charts (live graphs: wattage/current/voltage/% /temp vs time) ---
-    // (Vico charting library removed — ChargeFlow's design deliberately
+    // (Vico charting library removed — Battery Stats' design deliberately
     // avoids traditional line charts anywhere in the app, see
     // LiveMonitorScreen/SessionDetailScreen/StatisticsScreen for the
     // ring-meter/capsule-bar alternatives used instead.)
