@@ -11,7 +11,7 @@
         manifest. The activity's real theme (Theme.ChargeMeterPro) takes
         over automatically once the first Compose frame is drawn.
     -->
-    <style name="Theme.ChargeFlow.Splash" parent="Theme.SplashScreen">
+    <style name="Theme.BatteryStats.Splash" parent="Theme.SplashScreen">
         <!--
             Intentionally no windowSplashScreenAnimatedIcon here. We only
             want a single splash experience — the branded "Loading..."
