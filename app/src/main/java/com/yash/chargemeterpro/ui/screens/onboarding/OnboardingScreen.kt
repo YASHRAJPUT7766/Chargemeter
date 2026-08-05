@@ -299,7 +299,7 @@ private fun TypewriterFeatureRow(text: String, play: Boolean) {
 @Composable
 private fun BrandMark(size: Dp) {
     // Uses the plain PNG toolbar-logo asset (already used by
-    // ChargeFlowTopBar) rather than R.mipmap.ic_launcher — the launcher
+    // BatteryStatsTopBar) rather than R.mipmap.ic_launcher — the launcher
     // icon is an <adaptive-icon> XML, and painterResource() only supports
     // VectorDrawables and rasterized assets (PNG/JPG/WEBP), so loading
     // the adaptive mipmap directly crashes with IllegalArgumentException
