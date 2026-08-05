@@ -277,16 +277,18 @@ class CheckupViewModel @Inject constructor(
             val toLog = sorted.take(40)
             for (app in toLog) {
                 val minutes = app.foregroundTimeMillis / 60000.0
+                val minutesText = "%.1f".format(minutes)
                 val pct = (app.usageFraction * 100).roundToInt()
                 info("Checking ${app.appName}…")
                 if (minutes < 0.1) {
                     ok("${app.appName}: negligible usage today.")
                 } else {
                     val batteryPart = app.batteryPercent?.let { " · ~${it.roundToInt()}% of today's battery" } ?: ""
+                    val line = "${app.appName}: $minutesText min foreground, $pct% of tracked screen time$batteryPart."
                     if (app.usageFraction >= 0.30f) {
-                        warn("${app.appName}: %.1f min foreground, $pct%% of tracked screen time$batteryPart.".format(minutes))
+                        warn(line)
                     } else {
-                        ok("${app.appName}: %.1f min foreground, $pct%% of tracked screen time$batteryPart.".format(minutes))
+                        ok(line)
                     }
                 }
                 if (app.launchCount > 0) {
