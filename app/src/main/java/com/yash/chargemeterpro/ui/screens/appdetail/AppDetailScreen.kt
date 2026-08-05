@@ -282,7 +282,7 @@ private fun RestrictionCard(
                 if (overLimit && limitEnabled) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "You've reached today's limit for this app. ChargeFlow tracks this but won't block or close the app automatically.",
+                        "You've reached today's limit for this app. Battery Stats tracks this but won't block or close the app automatically.",
                         style = MaterialTheme.typography.labelSmall,
                         color = CriticalRed
                     )
