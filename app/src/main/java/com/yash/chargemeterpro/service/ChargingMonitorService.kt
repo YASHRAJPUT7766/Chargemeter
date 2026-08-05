@@ -6,10 +6,14 @@ import android.os.IBinder
 import androidx.core.app.ServiceCompat
 import com.yash.chargemeterpro.data.battery.ChargingPollScheduler
 import com.yash.chargemeterpro.data.local.SettingsDataStore
+import com.yash.chargemeterpro.data.local.dao.DrainSampleDao
 import com.yash.chargemeterpro.data.repository.BatteryRepository
 import com.yash.chargemeterpro.data.repository.ChargingSessionRepository
 import com.yash.chargemeterpro.domain.model.BatterySnapshot
 import com.yash.chargemeterpro.domain.model.ChargingStatus
+import com.yash.chargemeterpro.domain.usecase.ChargeTimeEstimator
+import com.yash.chargemeterpro.domain.usecase.DischargeTimeEstimator
+import com.yash.chargemeterpro.domain.usecase.DrainRateCalculator
 import com.yash.chargemeterpro.domain.usecase.PowerCalculator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -61,6 +65,7 @@ class ChargingMonitorService : Service() {
     @Inject lateinit var sessionRepository: ChargingSessionRepository
     @Inject lateinit var settingsDataStore: SettingsDataStore
     @Inject lateinit var notificationManager: ChargeMeterNotificationManager
+    @Inject lateinit var drainSampleDao: DrainSampleDao
 
     private var serviceJob: Job? = null
     private lateinit var scope: CoroutineScope
@@ -86,6 +91,16 @@ class ChargingMonitorService : Service() {
     // runs in the "was charging, now isn't" branch.
     private var loopIterationsSinceStart = 0
     private val maxIdleIterationsBeforeSelfStop = 8 // ~2 minutes at the 15s poll interval
+
+    // Rolling trailing window of (timestamp, percent) samples while
+    // actively charging, feeding ChargeTimeEstimator the same way
+    // HomeViewModel does for the in-app Live Monitor screen — kept here
+    // too so TimeRemainingWidget gets a real measured-rate estimate
+    // rather than duplicating this window inside the widget updater
+    // itself. Capped to the last ~10 minutes; cleared whenever charging
+    // stops so a new session starts its own fresh rate.
+    private val chargeRateSamples = ArrayDeque<ChargeTimeEstimator.RateSample>()
+    private val chargeRateWindowMillis = 10 * 60_000L
 
     override fun onCreate() {
         super.onCreate()
@@ -131,6 +146,7 @@ class ChargingMonitorService : Service() {
             evaluateAlerts(snapshot)
             refreshForegroundNotification(snapshot)
             com.yash.chargemeterpro.widget.ChargeMeterWidgetUpdater.pushUpdate(applicationContext, snapshot)
+            pushTimeRemainingWidgetUpdate(snapshot)
             lastKnownStatus = snapshot.chargingStatus
 
             // Safety valve for transient (plug-in-triggered) starts: if no
@@ -150,6 +166,44 @@ class ChargingMonitorService : Service() {
 
             delay(ChargingPollScheduler.BACKGROUND_SERVICE_INTERVAL_MS)
         }
+    }
+
+    /**
+     * Feeds TimeRemainingWidget using this app's own measured-rate
+     * estimators — ChargeTimeEstimator (from this service's own rolling
+     * sample window, mirroring HomeViewModel's approach) while charging,
+     * or DischargeTimeEstimator (from DrainMonitorWorker's persisted
+     * samples) while not. Never fabricates a number: both estimators
+     * return null until they have enough trailing data to trust, and the
+     * widget shows "—" in that case.
+     */
+    private suspend fun pushTimeRemainingWidgetUpdate(snapshot: BatterySnapshot) {
+        val minutesRemaining: Long?
+
+        if (snapshot.isCharging) {
+            val now = snapshot.timestampMillis
+            chargeRateSamples.addLast(ChargeTimeEstimator.RateSample(now, snapshot.batteryPercent))
+            while (chargeRateSamples.isNotEmpty() && now - chargeRateSamples.first().timestampMillis > chargeRateWindowMillis) {
+                chargeRateSamples.removeFirst()
+            }
+            val estimate = ChargeTimeEstimator.estimate(snapshot, chargeRateSamples.toList())
+            minutesRemaining = estimate.minutesRemainingToFull
+        } else {
+            chargeRateSamples.clear()
+            val since = System.currentTimeMillis() - (2 * 60 * 60 * 1000L) // last 2h of drain samples
+            val samples = drainSampleDao.getSince(since)
+            val rate = DrainRateCalculator.calculate(samples)
+            minutesRemaining = DischargeTimeEstimator.estimate(snapshot.batteryPercent, rate).minutesRemaining
+        }
+
+        com.yash.chargemeterpro.widget.TimeRemainingWidgetUpdater.pushUpdate(
+            context = applicationContext,
+            isCharging = snapshot.isCharging,
+            isFull = snapshot.isFull,
+            minutesRemaining = minutesRemaining,
+            voltageVolts = snapshot.voltageVolts,
+            currentAmps = snapshot.currentAmpsNormalized
+        )
     }
 
     private suspend fun handleSessionLifecycle(snapshot: BatterySnapshot) {

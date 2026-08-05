@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 import com.yash.chargemeterpro.data.local.SettingsDataStore
 import com.yash.chargemeterpro.util.DrainMonitorWorkScheduler
+import com.yash.chargemeterpro.util.UsageWidgetWorkScheduler
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
 
     @Inject lateinit var settingsDataStore: SettingsDataStore
     @Inject lateinit var drainMonitorWorkScheduler: DrainMonitorWorkScheduler
+    @Inject lateinit var usageWidgetWorkScheduler: UsageWidgetWorkScheduler
 
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action != Intent.ACTION_BOOT_COMPLETED) return
@@ -44,6 +46,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 drainMonitorWorkScheduler.schedule()
+                usageWidgetWorkScheduler.schedule()
 
                 val alwaysOnEnabled = settingsDataStore.alwaysOnMonitorEnabled.first()
                 if (alwaysOnEnabled) {
