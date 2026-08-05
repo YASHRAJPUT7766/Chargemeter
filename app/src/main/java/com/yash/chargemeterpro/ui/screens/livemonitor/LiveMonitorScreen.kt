@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -198,13 +199,15 @@ private fun HeroMetricCard(state: LiveMonitorUiState) {
 @Composable
 private fun TrendGraphCard(state: LiveMonitorUiState) {
     val points = state.graphPoints[state.selectedMetric].orEmpty()
+    val timeFormat = remember { java.text.SimpleDateFormat("h:mm:ss a", java.util.Locale.getDefault()) }
     InstrumentCard(modifier = Modifier.fillMaxWidth()) {
         SparklineGraph(
             values = points.map { it.value },
             color = metricColor(state.selectedMetric),
             label = "${metricLabel(state.selectedMetric)} Trend",
             valueSuffix = " ${metricUnit(state.selectedMetric)}",
-            height = 110.dp
+            height = 110.dp,
+            pointLabels = points.map { timeFormat.format(java.util.Date(it.timestampMillis)) }
         )
     }
 }
