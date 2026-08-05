@@ -232,7 +232,7 @@ private fun ThresholdsSection(vm: SettingsViewModel) {
 
                 SettingsSwitchRow(
                     title = "Stop-charging reminder",
-                    subtitle = "ChargeFlow can't stop charging by itself — Android doesn't allow that — but it will keep reminding you to unplug once you cross this limit",
+                    subtitle = "Battery Stats can't stop charging by itself — Android doesn't allow that — but it will keep reminding you to unplug once you cross this limit",
                     checked = customMilestoneEnabled,
                     onCheckedChange = vm::setCustomMilestoneEnabled
                 )
@@ -330,7 +330,7 @@ private fun MonitoringSection(vm: SettingsViewModel) {
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "Android's default battery-saving rules can occasionally block charging monitoring from starting automatically in the background. Exempting ChargeFlow from battery optimization makes auto-start monitoring and alerts fire reliably.",
+                        "Android's default battery-saving rules can occasionally block charging monitoring from starting automatically in the background. Exempting Battery Stats from battery optimization makes auto-start monitoring and alerts fire reliably.",
                         style = MaterialTheme.typography.bodySmall,
                         color = PanelGray
                     )
@@ -338,7 +338,7 @@ private fun MonitoringSection(vm: SettingsViewModel) {
                         onClick = { vm.requestIgnoreBatteryOptimizations(context) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Allow ChargeFlow to run in the background")
+                        Text("Allow Battery Stats to run in the background")
                     }
                 }
             }
@@ -353,7 +353,7 @@ private fun PrivacySection(vm: SettingsViewModel) {
         InstrumentCard(modifier = Modifier.fillMaxWidth()) {
             Column {
                 Text(
-                    "All charging history is stored only on this device. ChargeFlow has no server and no internet permission — nothing you do here is ever uploaded anywhere.",
+                    "All charging history is stored only on this device. Battery Stats has no server and no internet permission — nothing you do here is ever uploaded anywhere.",
                     style = MaterialTheme.typography.bodySmall,
                     color = PanelGray
                 )
